@@ -93,9 +93,3 @@ export const SKINS: Skin[] = [
   { id: 'gold', name: 'Golden Eagle', price: 5000, primaryColor: '#fbbf24', secondaryColor: '#b45309', isSpecial: true },
   { id: 'forest', name: 'Jungle Camo', price: 1500, primaryColor: '#15803d', secondaryColor: '#14532d' },
 ];
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {}
-  }
-}
