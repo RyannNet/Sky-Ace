@@ -328,7 +328,7 @@ const RadioAudioElement: React.FC<{ stream: MediaStream }> = ({ stream }) => {
         noiseNode.loop = true;
         
         const noiseGain = ctx.createGain();
-        noiseGain.gain.value = 0.05; // FIX: .value does not exist on GainNode, use .gain.value
+        noiseGain.gain.value = 0.05; // Fix TS GainNode error
 
         // 5. Connect the chain
         // Voice path: Source -> Filter -> Distortion -> Destination
@@ -406,6 +406,7 @@ function GameLoop({
   // Voice Props
   isVoiceEnabled,
   setVoiceStatus,
+  setPlayerCount
 }: { 
   onUpdate: (data: FlightData) => void, 
   onGameOver: (reason: 'CRASH' | 'FUEL') => void,
@@ -419,6 +420,7 @@ function GameLoop({
   isEditorMode: boolean,
   isVoiceEnabled: boolean,
   setVoiceStatus: (s: string) => void,
+  setPlayerCount: (n: number) => void,
 }) {
   const planeRef = useRef<Group>(null);
   const planePosition = useRef(new Vector3(0, 0, 400)); 
@@ -449,9 +451,14 @@ function GameLoop({
             const myId = (socketRef.current as any)?.id;
             if (myId) delete others[myId];
             setNetworkPlayers(others);
+            setPlayerCount(Object.keys(players).length);
         });
         socketRef.current.on('playerJoined', (player: NetworkPlayerData) => {
-            setNetworkPlayers(prev => ({ ...prev, [player.id]: player }));
+            setNetworkPlayers(prev => {
+                const updated = { ...prev, [player.id]: player };
+                setPlayerCount(Object.keys(updated).length + 1); // +1 for self
+                return updated;
+            });
         });
         socketRef.current.on('playerMoved', ({ id, data }: { id: string, data: any }) => {
             setNetworkPlayers(prev => {
@@ -463,6 +470,7 @@ function GameLoop({
             setNetworkPlayers(prev => {
                 const next = { ...prev };
                 delete next[id];
+                setPlayerCount(Object.keys(next).length + 1); // +1 for self
                 return next;
             });
         });
@@ -709,13 +717,14 @@ export default function App() {
   const [selectedEditorType, setSelectedEditorType] = useState<MapObjectType>('BUILDING_TALL');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Voice
+  // Voice & Multiplayer Stats
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("OFFLINE");
+  const [playerCount, setPlayerCount] = useState(1);
 
   useEffect(() => {
     // --- VERSION CHECK LOG ---
-    console.log("Sky Ace v3.2.1 - Fix TS GainNode Error - Loaded Successfully");
+    console.log("Sky Ace v3.3.0 - Codes Logic Implemented - Loaded Successfully");
   }, []);
 
   const handlePlaceObject = (pos: Vector3, type: MapObjectType) => {
@@ -817,7 +826,39 @@ export default function App() {
           setProfile(p => ({...p, customAudio: {...p.customAudio, [key]: ''}}));
       }
   };
-  const handleRedeemCode = (code: string) => { /* Code Logic */ };
+  
+  // --- REDEEM CODE LOGIC ---
+  const handleRedeemCode = (code: string) => {
+      const clean = code.toUpperCase().trim();
+      let success = false;
+      let reward = "";
+
+      if ((clean === "GABI" || clean === "KAZADA") && !profile.unlockedSkins.includes("kazada")) {
+          setProfile(p => ({ ...p, unlockedSkins: [...p.unlockedSkins, "kazada"], equippedSkin: "kazada", coins: p.coins + 1000 }));
+          success = true;
+          reward = "SKIN: GABI SPECIAL + 1000 COINS";
+      } else if ((clean === "PEDRO" || clean === "SKYKING") && !profile.unlockedSkins.includes("pedro")) {
+           setProfile(p => ({ ...p, unlockedSkins: [...p.unlockedSkins, "pedro"], equippedSkin: "pedro", coins: p.coins + 1000 }));
+           success = true;
+           reward = "SKIN: SKY KING + 1000 COINS";
+      } else if (clean === "GOLD" && !profile.unlockedSkins.includes("gold")) {
+          setProfile(p => ({ ...p, unlockedSkins: [...p.unlockedSkins, "gold"], coins: p.coins + 500 }));
+          success = true;
+          reward = "SKIN: GOLDEN EAGLE + 500 COINS";
+      }
+
+      if (success) {
+          triggerSound('win');
+          alert(`CODE REDEEMED!\n${reward}`);
+      } else {
+          triggerSound('click');
+          if (clean === "GABI" || clean === "PEDRO" || clean === "GOLD") {
+               alert("ALREADY UNLOCKED!");
+          } else {
+               alert("INVALID CODE");
+          }
+      }
+  };
 
   const renderSoundManager = () => (
       <SoundManager 
@@ -847,6 +888,7 @@ export default function App() {
                 isEditorMode={isEditorMode}
                 isVoiceEnabled={isVoiceActive}
                 setVoiceStatus={setVoiceStatus}
+                setPlayerCount={setPlayerCount}
              />
           );
       }
@@ -873,6 +915,7 @@ export default function App() {
                  isEditorMode={false}
                  isVoiceEnabled={false}
                  setVoiceStatus={() => {}}
+                 setPlayerCount={() => {}}
              />
              <OrbitingCamera />
          </group>
@@ -907,6 +950,7 @@ export default function App() {
                 isVoiceActive={isVoiceActive}
                 toggleVoice={() => setIsVoiceActive(p => !p)}
                 voiceStatus={voiceStatus}
+                playerCount={playerCount}
             />
         )}
         

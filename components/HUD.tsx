@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { FlightData, GameState, MapObjectType } from '../types';
-import { Camera, Pause, Hammer, Save, X, Box, Triangle, Mic, MicOff, Radio } from 'lucide-react';
+import { Camera, Pause, Hammer, Save, X, Box, Triangle, Mic, MicOff, Radio, Users } from 'lucide-react';
 
 interface HUDProps {
   flightData: FlightData;
@@ -19,6 +19,7 @@ interface HUDProps {
   isVoiceActive: boolean;
   toggleVoice: () => void;
   voiceStatus: string;
+  playerCount?: number;
 }
 
 // Minimalistic Bar Component
@@ -54,6 +55,7 @@ export const HUD: React.FC<HUDProps> = ({
   isVoiceActive,
   toggleVoice,
   voiceStatus,
+  playerCount = 1,
 }) => {
   const isStalling = !flightData.isGrounded && flightData.speed < 50;
   const [activeTool, setActiveTool] = useState<string>('BUILDING_TALL');
@@ -128,9 +130,9 @@ export const HUD: React.FC<HUDProps> = ({
            )}
       </div>
 
-      {/* Voice Chat Control (Top Left) */}
+      {/* Voice Chat Control & Player Count (Top Left) */}
       {!isEditorMode && (
-        <div className="absolute top-4 left-4 pointer-events-auto flex items-start gap-2">
+        <div className="absolute top-4 left-4 pointer-events-auto flex flex-col gap-2">
              <button 
                 onClick={toggleVoice} 
                 className={`flex items-center gap-2 px-3 py-2 rounded border backdrop-blur transition-all ${isVoiceActive ? 'bg-green-500/20 border-green-500 text-green-400' : 'bg-black/40 border-white/10 text-slate-400 hover:bg-white/10'}`}
@@ -141,12 +143,18 @@ export const HUD: React.FC<HUDProps> = ({
                      <span className="text-[9px] font-mono leading-none opacity-70">{voiceStatus}</span>
                  </div>
              </button>
+             
              {isVoiceActive && (
                  <div className="bg-black/60 backdrop-blur px-2 py-1 rounded border border-white/10 flex items-center gap-2">
                      <Radio size={14} className="text-amber-500 animate-pulse" />
                      <span className="text-[10px] font-mono text-amber-500">123.45 MHz</span>
                  </div>
              )}
+
+             <div className="bg-black/40 backdrop-blur px-3 py-2 rounded border border-white/10 flex items-center gap-2">
+                 <Users size={16} className="text-amber-500" />
+                 <span className="text-xs font-bold text-white">ONLINE: {playerCount}</span>
+             </div>
         </div>
       )}
 
