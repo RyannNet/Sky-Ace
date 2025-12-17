@@ -169,7 +169,7 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
     camera.position.lerp(camTarget, cameraMode === 'FIRST' ? 0.6 : 0.1);
     camera.lookAt(planePosition.current.clone().add(forward.multiplyScalar(30)));
 
-    onUpdate({ speed: speedRef.current, altitude: planePosition.current.y, fuel: 100, heading: MathUtils.radToDeg(planeEuler.current.y), pitch: MathUtils.radToDeg(planeEuler.current.x), roll: MathUtils.radToDeg(planeEuler.current.z), isGrounded });
+    onUpdate({ speed: speedRef.current, altitude: planePosition.current.y, fuel: 100, heading: MathUtils.radToDeg(planeEuler.current.y), pitch: MathUtils.radToDeg(planeEuler.current.x), roll: MathUtils.radToDeg(planeEuler.current.z), isGrounded, z: planePosition.current.z });
   });
 
   return (
@@ -234,7 +234,7 @@ export default function App() {
 
         {screen === 'MENU' && <MainMenu onStart={()=>setScreen('ROOMS')} profile={profile} setScreen={(s:any)=>setScreen(s)} />}
         {screen === 'ROOMS' && <RoomSelection onJoin={(code:string)=>{setGameState(p=>({...p, isPlaying:true, currentRoom:code})); setScreen('GAME');}} onBack={()=>setScreen('MENU')} />}
-        {screen === 'GARAGE' && <Garage profile={profile} onEquip={(id)=>setProfile(p=>({...p, equippedSkin:id}))} onBuy={(id)=>setProfile(p=>({...p, coins:p.coins-SKINS.find(s=>s.id===id)!.price, unlockedSkins:[...p.unlockedSkins, id]}))} onUpgrade={handleUpgrade} onClose={()=>setScreen('MENU')} />}
+        {screen === 'GARAGE' && <Garage profile={profile} onEquip={(id: string)=>setProfile(p=>({...p, equippedSkin:id}))} onBuy={(id: string)=>setProfile(p=>({...p, coins:p.coins-SKINS.find(s=>s.id===id)!.price, unlockedSkins:[...p.unlockedSkins, id]}))} onUpgrade={handleUpgrade} onClose={()=>setScreen('MENU')} />}
         {screen === 'PROFILE' && <ProfileScreen profile={profile} onRedeemCode={handleRedeemCode} onClose={()=>setScreen('MENU')} />}
         {screen === 'SETTINGS' && <SettingsScreen profile={profile} updateSettings={(k:any,v:any)=>setProfile(p=>({...p,settings:{...p.settings,[k]:v}}))} onClose={()=>setScreen('MENU')} />}
 

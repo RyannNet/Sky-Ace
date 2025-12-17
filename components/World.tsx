@@ -107,8 +107,8 @@ export const World: React.FC<WorldProps> = ({ mapObjects }) => {
       </group>
 
       {/* Distant Clouds for scale */}
-      <Cloud position={[-500, 300, -1000]} opacity={0.5} speed={0.2} width={200} depth={50} segments={20} />
-      <Cloud position={[500, 400, -2000]} opacity={0.5} speed={0.2} width={300} depth={50} segments={20} />
+      <Cloud position={[-500, 300, -1000]} opacity={0.5} speed={0.2} />
+      <Cloud position={[500, 400, -2000]} opacity={0.5} speed={0.2} />
     </>
   );
 };
