@@ -1,114 +1,171 @@
 
-import React, { useMemo } from 'react';
-import { Sky, Stars, Cloud } from '@react-three/drei';
-import { MapObject } from '../types';
+import React, { useMemo, useRef } from 'react';
+import { Sky, Stars, Cloud, Float } from '@react-three/drei';
+import { Vector3, Color } from 'three';
+import { useFrame } from '@react-three/fiber';
 
-interface WorldProps {
-    mapObjects: MapObject[];
-    isEditorMode: boolean;
-    onPlaceObject: (pos: any, type: any) => void;
-    onRemoveObject: (id: string) => void;
-}
+const Building: React.FC<{ position: [number, number, number]; size: [number, number, number]; color: string }> = ({ position, size, color }) => {
+    return (
+        <group position={position}>
+            <mesh castShadow receiveShadow>
+                <boxGeometry args={size} />
+                <meshStandardMaterial color={color} roughness={0.1} metalness={0.8} />
+            </mesh>
+            <mesh position={[0, 0, 0]}>
+                <boxGeometry args={[size[0] + 0.1, size[1] * 0.8, size[2] + 0.1]} />
+                <meshStandardMaterial color="#fde047" emissive="#fde047" emissiveIntensity={0.5} transparent opacity={0.1} wireframe />
+            </mesh>
+        </group>
+    );
+};
 
-export const World: React.FC<WorldProps> = ({ mapObjects }) => {
-  // Generate Big City objects dynamically for performance and scale
-  const cityObjects = useMemo(() => {
-    const buildings: React.ReactNode[] = [];
-    for (let i = 0; i < 50; i++) {
-        const x = (Math.random() - 0.5) * 800;
-        const z = -2000 - Math.random() * 1500;
-        const h = 100 + Math.random() * 400;
-        const w = 40 + Math.random() * 60;
-        buildings.push(
-            <mesh key={`city-${i}`} position={[x, h/2, z]} castShadow receiveShadow>
-                <boxGeometry args={[w, h, w]} />
-                <meshStandardMaterial color="#0f172a" roughness={0.1} metalness={0.8} />
-                {/* Windows effect */}
-                <mesh position={[0,0,0]}>
-                    <boxGeometry args={[w + 0.5, h - 10, w + 0.5]} />
-                    <meshStandardMaterial color="#1e293b" wireframe opacity={0.1} transparent />
+const WeatherSystem: React.FC<{ active: boolean }> = ({ active }) => {
+    const rainRef = useRef<any>(null);
+    useFrame((state) => {
+        if (rainRef.current && active) {
+            rainRef.current.position.y -= 2;
+            if (rainRef.current.position.y < -500) rainRef.current.position.y = 500;
+        }
+    });
+    if (!active) return null;
+    return (
+        <group ref={rainRef}>
+            {Array.from({ length: 100 }).map((_, i) => (
+                <mesh key={i} position={[(Math.random() - 0.5) * 2000, Math.random() * 1000, (Math.random() - 0.5) * 2000]}>
+                    <boxGeometry args={[0.05, 5, 0.05]} />
+                    <meshBasicMaterial color="#7dd3fc" transparent opacity={0.3} />
                 </mesh>
+            ))}
+        </group>
+    );
+};
+
+export const World: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) => {
+  // Optimization Thresholds
+  const distToCity = planePosition.distanceTo(new Vector3(0, 0, -2500));
+  const distToForest = planePosition.distanceTo(new Vector3(3000, 0, -2000));
+  const distToDesert = planePosition.distanceTo(new Vector3(-3000, 0, -2000));
+  
+  const showCity = distToCity < 5000;
+  const showForest = distToForest < 5000;
+  const showDesert = distToDesert < 5000;
+
+  const citySector = useMemo(() => {
+    if (!showCity) return null;
+    const buildings = [];
+    for (let row = 0; row < 8; row++) {
+        for (let col = -4; col <= 4; col++) {
+            const x = col * 180;
+            const z = -2000 - row * 180;
+            const h = 200 + Math.random() * 600;
+            buildings.push(<Building key={`c-${row}-${col}`} position={[x, h/2, z]} size={[80, h, 80]} color="#1e293b" />);
+        }
+    }
+    return buildings;
+  }, [showCity]);
+
+  const forestSector = useMemo(() => {
+    if (!showForest) return null;
+    const trees = [];
+    for (let i = 0; i < 200; i++) {
+        const x = 3000 + (Math.random() - 0.5) * 1500;
+        const z = -2000 + (Math.random() - 0.5) * 1500;
+        trees.push(
+            <group key={`t-${i}`} position={[x, 0, z]}>
+                <mesh position={[0, 15, 0]}>
+                    <coneGeometry args={[10, 30, 8]} />
+                    <meshStandardMaterial color="#166534" />
+                </mesh>
+                <mesh position={[0, 5, 0]}>
+                    <cylinderGeometry args={[2, 2, 10]} />
+                    <meshStandardMaterial color="#422006" />
+                </mesh>
+            </group>
+        );
+    }
+    return forestSectorGround(trees);
+  }, [showForest]);
+
+  const desertSector = useMemo(() => {
+    if (!showDesert) return null;
+    const structures = [];
+    for (let i = 0; i < 20; i++) {
+        const x = -3000 + (Math.random() - 0.5) * 1500;
+        const z = -2000 + (Math.random() - 0.5) * 1500;
+        structures.push(
+            <mesh key={`d-${i}`} position={[x, 50, z]}>
+                <octahedronGeometry args={[50]} />
+                <meshStandardMaterial color="#fcd34d" metalness={0.8} roughness={0.2} />
             </mesh>
         );
     }
-    return buildings;
-  }, []);
+    return desertSectorGround(structures);
+  }, [showDesert]);
 
   return (
     <>
       <Sky sunPosition={[100, 20, 100]} turbidity={0.1} rayleigh={0.5} />
       <Stars radius={300} depth={50} count={5000} factor={4} />
-      <fog attach="fog" args={['#0ea5e9', 0, 4000]} />
+      <fog attach="fog" args={showForest ? ['#14532d', 0, 4000] : ['#0ea5e9', 0, 5000]} />
       
       <ambientLight intensity={0.5} />
-      <directionalLight position={[50, 100, 50]} intensity={1.5} castShadow shadow-mapSize={[2048, 2048]} />
+      <directionalLight position={[50, 100, 50]} intensity={1.5} castShadow />
 
-      {/* Starting Airport Base (Island/Platform) */}
+      <WeatherSystem active={showForest} />
+
+      {/* Airport Home */}
       <group position={[0, -0.1, 400]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <planeGeometry args={[1000, 1200]} />
+            <planeGeometry args={[1200, 1500]} />
             <meshStandardMaterial color="#1e293b" />
         </mesh>
-        
-        {/* Runway */}
         <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-            <planeGeometry args={[80, 1000]} />
+            <planeGeometry args={[100, 1000]} />
             <meshStandardMaterial color="#0f172a" />
         </mesh>
-
-        {/* Runway Markings */}
-        {Array.from({ length: 20 }).map((_, i) => (
-            <mesh key={i} position={[0, 0.1, -450 + i * 50]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[4, 25]} />
-                <meshStandardMaterial color="white" emissive="white" emissiveIntensity={0.5} />
-            </mesh>
-        ))}
-
-        {/* Airport Structures */}
-        {/* Control Tower */}
-        <group position={[150, 0, -200]}>
-            <mesh position={[0, 60, 0]} castShadow>
-                <cylinderGeometry args={[10, 15, 120, 8]} />
-                <meshStandardMaterial color="#334155" />
-            </mesh>
-            <mesh position={[0, 120, 0]} castShadow>
-                <boxGeometry args={[40, 30, 40]} />
-                <meshStandardMaterial color="#bae6fd" transparent opacity={0.7} />
-            </mesh>
-        </group>
-
-        {/* Hangars */}
-        {[-1, 1].map(side => (
-            <group key={side} position={[250 * side, 0, 100]}>
-                {Array.from({length: 3}).map((_, i) => (
-                    <mesh key={i} position={[0, 25, i * 120]} castShadow>
-                        <boxGeometry args={[150, 50, 100]} />
-                        <meshStandardMaterial color="#475569" />
-                    </mesh>
-                ))}
+        {Array.from({ length: 10 }).map((_, i) => (
+            <group key={i} position={[0, 0.1, -450 + i * 100]}>
+                <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[6, 40]} />
+                    <meshStandardMaterial color="white" emissive="white" emissiveIntensity={0.5} />
+                </mesh>
             </group>
         ))}
       </group>
 
-      {/* THE OCEAN (Hazard) */}
+      {/* Optimized Biomes */}
+      <group>{citySector}</group>
+      <group>{forestSector}</group>
+      <group>{desertSector}</group>
+
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -5, -2000]}>
-        <planeGeometry args={[10000, 10000]} />
+        <planeGeometry args={[30000, 30000]} />
         <meshStandardMaterial color="#0284c7" metalness={0.9} roughness={0.1} />
       </mesh>
-
-      {/* THE BIG CITY (Target 2km away) */}
-      <group>
-          {cityObjects}
-          {/* Central Mega Skyscraper */}
-          <mesh position={[0, 400, -2500]} castShadow>
-              <boxGeometry args={[120, 800, 120]} />
-              <meshStandardMaterial color="#020617" metalness={1} roughness={0} />
-          </mesh>
-      </group>
-
-      {/* Distant Clouds for scale */}
-      <Cloud position={[-500, 300, -1000]} opacity={0.5} speed={0.2} />
-      <Cloud position={[500, 400, -2000]} opacity={0.5} speed={0.2} />
     </>
   );
 };
+
+function forestSectorGround(children: any) {
+    return (
+        <group>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[3000, -0.1, -2000]}>
+                <planeGeometry args={[3000, 3000]} />
+                <meshStandardMaterial color="#14532d" />
+            </mesh>
+            {children}
+        </group>
+    );
+}
+
+function desertSectorGround(children: any) {
+    return (
+        <group>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-3000, -0.1, -2000]}>
+                <planeGeometry args={[3000, 3000]} />
+                <meshStandardMaterial color="#78350f" />
+            </mesh>
+            {children}
+        </group>
+    );
+}

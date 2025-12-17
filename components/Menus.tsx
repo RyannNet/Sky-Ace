@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { SKINS, PlayerProfile } from '../types';
-import { Play, ShoppingCart, User, Settings, X, ChevronLeft, Lock, Check, Coins, Zap, Shield, Globe, LockKeyhole, PlusSquare, RefreshCw } from 'lucide-react';
+import { Play, ShoppingCart, User, Settings, X, ChevronLeft, Lock, Check, Coins, Zap, Shield, Globe, LockKeyhole, PlusSquare, RefreshCw, Maximize, Smartphone } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 const GlassPanel = ({ children, className = "" }: any) => (
@@ -11,13 +11,36 @@ const GlassPanel = ({ children, className = "" }: any) => (
     </div>
 );
 
+export const SplashScreen = ({ onStart }: any) => (
+    <div className="absolute inset-0 z-[200] bg-slate-950 flex flex-col items-center justify-center font-rajdhani p-8 text-center bg-[url('https://images.unsplash.com/photo-1517976487492-5750f3195933?q=80&w=2070')] bg-cover bg-center">
+        <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
+        <div className="relative z-10 flex flex-col items-center max-w-lg">
+            <h1 className="text-8xl md:text-9xl font-black italic text-white tracking-tighter leading-none mb-4">SKY<br/><span className="text-amber-500">ACE</span></h1>
+            <p className="text-slate-300 font-bold tracking-[0.4em] uppercase text-xs mb-12">Flight Systems Readiness Level: 100%</p>
+            
+            <button 
+                onClick={onStart}
+                className="group relative flex items-center gap-4 px-12 py-6 bg-white text-black font-black text-2xl skew-x-[-15deg] transition-all hover:bg-amber-500 hover:shadow-[0_0_50px_rgba(255,255,255,0.2)] active:scale-95"
+            >
+                <div className="skew-x-[15deg] flex items-center gap-3">
+                    <Maximize size={24} /> ENTER THEATER
+                </div>
+            </button>
+
+            <div className="mt-12 flex flex-col items-center gap-3 animate-bounce opacity-60">
+                <Smartphone className="text-white rotate-90" size={32} />
+                <span className="text-white text-[10px] font-black tracking-widest uppercase">Rotate for landscape orientation</span>
+            </div>
+        </div>
+    </div>
+);
+
 export const LoadingScreen = () => (
     <div className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center font-rajdhani p-6 text-center">
-        <div className="text-6xl md:text-8xl font-black italic tracking-tighter text-white animate-pulse">SKY ACE</div>
+        <div className="text-6xl md:text-8xl font-black italic tracking-tighter text-white animate-pulse uppercase">Syncing World</div>
         <div className="mt-8 md:mt-12 w-48 md:w-64 h-1 bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-amber-500 animate-[loading_2s_ease-in-out_infinite]"></div>
         </div>
-        <div className="mt-4 text-[8px] md:text-[10px] text-slate-500 tracking-[0.5em] md:tracking-[0.8em] uppercase">Initializing Flight Deck</div>
         <style>{`@keyframes loading { 0% { width: 0%; transform: translateX(-100%); } 100% { width: 100%; transform: translateX(100%); } }`}</style>
     </div>
 );

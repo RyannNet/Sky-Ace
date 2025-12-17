@@ -1,6 +1,6 @@
 {
   "name": "Sky Ace: 3D Flight Simulator",
-  "description": "A browser-based 3D flight simulator featuring realistic flight physics, mobile and PC controls, dynamic weather, and hidden secrets.",
+  "description": "A browser-based 3D flight simulator featuring realistic flight physics, mobile and PC controls, dynamic weather, and biomes.",
   "requestFramePermissions": [
     "microphone"
   ]
