@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Camera, Pause, Users, Signal, Maximize2, Minimize2, Waves, BellRing } from 'lucide-react';
+import { Camera, Pause, Users, Signal, Maximize2, Minimize2, BellRing } from 'lucide-react';
 
 export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, onPause, playerCount, networkStatus, chatMessages, regionNotification }: any) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -41,66 +41,72 @@ export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, 
   }
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col p-4 md:p-6 text-white font-rajdhani select-none">
+    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col p-4 md:p-10 text-white font-rajdhani select-none">
         
-        {/* Top: Room & Network */}
+        {/* Top bar refined for landscape */}
         <div className="flex justify-between items-start pointer-events-auto">
-            <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 md:gap-3 bg-black/60 backdrop-blur px-3 py-1.5 md:px-4 md:py-2 border border-white/10 rounded-lg">
-                    <Signal size={12} className={networkStatus === "CONNECTED" ? "text-green-400" : "text-red-400"} />
-                    <span className="text-[10px] md:text-xs font-bold tracking-widest">{gameState.currentRoom}</span>
-                    <div className="w-[1px] h-3 md:h-4 bg-white/10 mx-1 md:mx-2"></div>
-                    <Users size={12} className="text-amber-500" />
-                    <span className="text-[10px] md:text-xs font-bold">{playerCount}</span>
+            <div className="flex items-center gap-2 md:gap-4 bg-black/50 backdrop-blur-md px-4 py-2 border border-white/5 rounded-full">
+                <div className="flex items-center gap-2">
+                    <Signal size={14} className={networkStatus === "CONNECTED" ? "text-green-400 animate-pulse" : "text-red-400"} />
+                    <span className="text-[10px] md:text-xs font-black tracking-widest uppercase">{gameState.currentRoom}</span>
+                </div>
+                <div className="w-[1px] h-3 bg-white/20"></div>
+                <div className="flex items-center gap-2">
+                    <Users size={14} className="text-amber-500" />
+                    <span className="text-[10px] md:text-xs font-black">{playerCount}</span>
                 </div>
             </div>
 
-            <div className="flex gap-1 md:gap-2">
-                <button onClick={toggleFullscreen} className="p-2 md:p-3 bg-black/60 border border-white/10 rounded-lg hover:bg-white/10 transition-colors">
+            <div className="flex gap-2">
+                <button onClick={toggleFullscreen} className="p-2 md:p-3 bg-black/50 backdrop-blur-md border border-white/5 rounded-full hover:bg-white/10 active:scale-90 transition-all">
                     {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                 </button>
-                <button onClick={toggleCamera} className="p-2 md:p-3 bg-black/60 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"><Camera size={18}/></button>
-                <button onClick={onPause} className="p-2 md:p-3 bg-black/60 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"><Pause size={18}/></button>
+                <button onClick={toggleCamera} className="p-2 md:p-3 bg-black/50 backdrop-blur-md border border-white/5 rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                    <Camera size={18}/>
+                </button>
+                <button onClick={onPause} className="p-2 md:p-3 bg-black/50 backdrop-blur-md border border-white/5 rounded-full hover:bg-white/10 active:scale-90 transition-all">
+                    <Pause size={18}/>
+                </button>
             </div>
         </div>
 
-        {/* Region Toast (Bottom Left) */}
+        {/* Region Toast - Moved slightly for better ergonomics */}
         {regionNotification && (
-            <div className="absolute bottom-32 left-8 pointer-events-none flex flex-col gap-2 animate-[slide_0.3s_ease-out]">
-                <div className="bg-amber-500 text-black px-4 py-2 font-black italic text-xs md:text-sm skew-x-[-10deg] flex items-center gap-2">
-                    <BellRing size={14} className="animate-bounce" /> 
-                    <span className="skew-x-[10deg]">VOCÊ ESTÁ SAINDO DE {regionNotification.old.toUpperCase()}</span>
+            <div className="absolute top-1/4 left-8 pointer-events-none flex flex-col gap-2 animate-[slide_0.4s_cubic-bezier(0.18,0.89,0.32,1.28)]">
+                <div className="bg-amber-500 text-black px-5 py-2.5 font-black italic text-xs md:text-sm skew-x-[-15deg] flex items-center gap-3 shadow-xl">
+                    <BellRing size={16} className="animate-bounce" /> 
+                    <span className="skew-x-[15deg]">DEPARTING {regionNotification.old.toUpperCase()}</span>
                 </div>
-                <div className="bg-white/10 backdrop-blur text-white px-4 py-1.5 font-bold text-[10px] md:text-xs border-l-4 border-amber-500">
-                    OTIMIZANDO CENA: DESATIVANDO ELEMENTOS DISTANTES...
+                <div className="bg-white/10 backdrop-blur-xl text-white px-5 py-2 font-bold text-[9px] md:text-xs border-l-4 border-amber-500 uppercase tracking-widest">
+                    Optimizing World Data Clusters...
                 </div>
-                <div className="bg-cyan-500 text-black px-4 py-1.5 font-black italic text-[10px] md:text-xs skew-x-[10deg]">
-                   <span className="skew-x-[-10deg]">ENTRANDO EM {regionNotification.new.toUpperCase()}</span>
+                <div className="bg-cyan-500 text-black px-5 py-2 font-black italic text-[10px] md:text-xs skew-x-[15deg] shadow-lg">
+                   <span className="skew-x-[-15deg]">APPROACHING {regionNotification.new.toUpperCase()}</span>
                 </div>
             </div>
         )}
 
-        {/* Instruments */}
-        <div className="flex justify-between items-end mt-auto mb-2 md:mb-4 px-2 md:px-0">
-             <div className="flex flex-col items-start gap-0 md:gap-1">
-                 <div className="text-[8px] md:text-xs text-amber-500 font-bold tracking-widest uppercase">SPD</div>
-                 <div className="text-4xl md:text-6xl font-black italic tracking-tighter tabular-nums">
-                    {Math.round(flightData.speed)}<span className="text-xs md:text-lg ml-0.5 md:ml-1 opacity-50">KTS</span>
+        {/* Bottom Instruments - Refined Scaling for Mobile Landscape */}
+        <div className="flex justify-between items-end mt-auto px-2 md:px-0">
+             <div className="flex flex-col items-start bg-black/20 backdrop-blur-sm p-4 rounded-xl border-l-4 border-amber-500">
+                 <div className="text-[10px] md:text-xs text-amber-500 font-black tracking-[0.2em] uppercase">Airspeed</div>
+                 <div className="text-4xl md:text-7xl font-black italic tracking-tighter tabular-nums leading-none">
+                    {Math.round(flightData.speed)}<span className="text-xs md:text-xl ml-1 opacity-40">KTS</span>
                  </div>
              </div>
 
-             <div className="flex flex-col items-end gap-0 md:gap-1">
-                 <div className="text-[8px] md:text-xs text-cyan-400 font-bold tracking-widest uppercase">ALT</div>
-                 <div className="text-4xl md:text-6xl font-black italic tracking-tighter tabular-nums">
-                    {Math.round(flightData.altitude)}<span className="text-xs md:text-lg ml-0.5 md:ml-1 opacity-50">FT</span>
+             <div className="flex flex-col items-end bg-black/20 backdrop-blur-sm p-4 rounded-xl border-r-4 border-cyan-400">
+                 <div className="text-[10px] md:text-xs text-cyan-400 font-black tracking-[0.2em] uppercase">Altitude</div>
+                 <div className="text-4xl md:text-7xl font-black italic tracking-tighter tabular-nums leading-none">
+                    {Math.round(flightData.altitude)}<span className="text-xs md:text-xl ml-1 opacity-40">FT</span>
                  </div>
              </div>
         </div>
         
         <style>{`
             @keyframes slide {
-                0% { transform: translateX(-50px); opacity: 0; }
-                100% { transform: translateX(0); opacity: 1; }
+                0% { transform: translateX(-100px); opacity: 0; filter: blur(10px); }
+                100% { transform: translateX(0); opacity: 1; filter: blur(0); }
             }
         `}</style>
     </div>

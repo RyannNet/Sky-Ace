@@ -58,7 +58,6 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
   const maxSpeed = MAX_SPEED_BASE + (profile.upgrades.turbo - 1) * 25;
   const handlingMult = 1 + (profile.upgrades.handling - 1) * 0.15;
 
-  // Region Tracking
   const lastRegion = useRef("Aeroporto");
 
   useEffect(() => {
@@ -139,7 +138,6 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
     if (!isGrounded && speedRef.current < STALL_SPEED) move.y -= 25 * dt;
     planePosition.current.add(move);
 
-    // Biome/Region logic
     let currentRegion = "Espaço Aéreo";
     const pos = planePosition.current;
     if (pos.z > -100 && Math.abs(pos.x) < 1000) currentRegion = "Aeroporto Central";
@@ -242,7 +240,7 @@ export default function App() {
     <div className="w-full h-full relative bg-slate-950 overflow-hidden font-rajdhani">
         {screen === 'SPLASH' && <SplashScreen onStart={handleStartApp} />}
         {screen === 'LOADING' && <LoadingScreen />}
-        <Canvas shadows camera={{ position: [5, 5, 410], fov: 60 }}>
+        <Canvas shadows camera={{ position: [5, 5, 410], fov: 60, far: 50000 }}>
             <SoundManager throttle={0} speed={0} isPaused={false} isGameOver={false} volume={{music:profile.settings.musicVolume, sfx:profile.settings.sfxVolume}} customAudio={profile.customAudio} triggerSfx={null} />
             {screen === 'GAME' ? (
                 <GameLoop 
