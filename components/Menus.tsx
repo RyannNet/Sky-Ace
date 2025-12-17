@@ -2,82 +2,89 @@
 import React, { useState } from 'react';
 import { SKINS, PlayerProfile } from '../types';
 import { Play, ShoppingCart, User, Settings, X, ChevronLeft, Lock, Check, Coins, Zap, Shield, Globe, LockKeyhole, PlusSquare, RefreshCw, Maximize, Smartphone } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 
 const GlassPanel = ({ children, className = "" }: any) => (
-    <div className={`bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden relative ${className}`}>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-40"></div>
+    <div className={`bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-2xl overflow-hidden relative ${className}`}>
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-amber-500/50 to-transparent"></div>
         {children}
     </div>
 );
 
 export const SplashScreen = ({ onStart }: any) => (
-    <div className="absolute inset-0 z-[200] bg-slate-950 flex flex-col items-center justify-center font-rajdhani p-8 text-center bg-[url('https://images.unsplash.com/photo-1517976487492-5750f3195933?q=80&w=2070')] bg-cover bg-center">
+    <div className="absolute inset-0 z-[200] bg-slate-950 flex flex-col items-center justify-center font-rajdhani p-4 text-center bg-[url('https://images.unsplash.com/photo-1517976487492-5750f3195933?q=80&w=2070')] bg-cover bg-center">
         <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"></div>
         <div className="relative z-10 flex flex-col items-center max-w-lg">
-            <h1 className="text-8xl md:text-9xl font-black italic text-white tracking-tighter leading-none mb-4">SKY<br/><span className="text-amber-500">ACE</span></h1>
-            <p className="text-slate-300 font-bold tracking-[0.4em] uppercase text-xs mb-12">Flight Systems Readiness Level: 100%</p>
+            <h1 className="text-6xl md:text-9xl font-black italic text-white tracking-tighter leading-none mb-2">SKY<span className="text-amber-500">ACE</span></h1>
+            <p className="text-slate-300 font-bold tracking-[0.4em] uppercase text-[10px] mb-8">System Status: Ready</p>
             
             <button 
                 onClick={onStart}
-                className="group relative flex items-center gap-4 px-12 py-6 bg-white text-black font-black text-2xl skew-x-[-15deg] transition-all hover:bg-amber-500 hover:shadow-[0_0_50px_rgba(255,255,255,0.2)] active:scale-95"
+                className="group relative flex items-center gap-4 px-10 py-4 bg-white text-black font-black text-xl skew-x-[-15deg] transition-all hover:bg-amber-500 active:scale-95"
             >
-                <div className="skew-x-[15deg] flex items-center gap-3">
-                    <Maximize size={24} /> ENTER THEATER
+                <div className="skew-x-[15deg] flex items-center gap-3 uppercase">
+                    <Maximize size={20} /> Iniciar Voo
                 </div>
             </button>
-
-            <div className="mt-12 flex flex-col items-center gap-3 animate-bounce opacity-60">
-                <Smartphone className="text-white rotate-90" size={32} />
-                <span className="text-white text-[10px] font-black tracking-widest uppercase">Rotate for landscape orientation</span>
-            </div>
         </div>
     </div>
 );
 
 export const LoadingScreen = () => (
     <div className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center font-rajdhani p-6 text-center">
-        <div className="text-6xl md:text-8xl font-black italic tracking-tighter text-white animate-pulse uppercase">Syncing World</div>
-        <div className="mt-8 md:mt-12 w-48 md:w-64 h-1 bg-white/10 rounded-full overflow-hidden">
+        <div className="text-4xl md:text-7xl font-black italic tracking-tighter text-white animate-pulse uppercase">Carregando Mundo...</div>
+        <div className="mt-8 w-48 h-1 bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-amber-500 animate-[loading_2s_ease-in-out_infinite]"></div>
         </div>
-        <style>{`@keyframes loading { 0% { width: 0%; transform: translateX(-100%); } 100% { width: 100%; transform: translateX(100%); } }`}</style>
     </div>
 );
 
 export const MainMenu = ({ onStart, profile, setScreen }: any) => (
-    <div className="absolute inset-0 z-50 flex flex-col items-center md:items-start justify-center p-6 md:p-12 bg-gradient-to-b md:bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent font-rajdhani pointer-events-none">
-        <div className="pointer-events-auto flex flex-col gap-4 md:gap-6 w-full max-w-xs md:max-w-md text-center md:text-left">
-            <div className="mb-6 md:mb-12">
-                <h1 className="text-7xl md:text-9xl font-black italic text-white tracking-tighter leading-[0.8]">SKY<br/><span className="text-amber-500">ACE</span></h1>
-                <p className="text-slate-500 tracking-[0.3em] md:tracking-[0.4em] text-[10px] md:text-xs mt-3 md:mt-4 uppercase font-bold">Next-Gen Flight Simulator</p>
+    <div className="absolute inset-0 z-50 flex flex-col md:flex-row items-center justify-between p-6 md:p-12 font-rajdhani pointer-events-none overflow-hidden">
+        {/* Top/Left Section: Title & Profile Compact */}
+        <div className="flex flex-col gap-4 pointer-events-auto self-start md:self-center">
+            <div className="mb-4">
+                <h1 className="text-5xl md:text-8xl font-black italic text-white tracking-tighter leading-none">SKY<br/><span className="text-amber-500">ACE</span></h1>
+                <p className="text-slate-500 tracking-[0.2em] text-[8px] md:text-[10px] mt-2 uppercase font-bold">Flight Simulator Pro</p>
             </div>
+            
+            {/* Compact Pilot Info */}
+            <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-2 md:p-3 pr-6 rounded-lg backdrop-blur-sm">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500/20 rounded-md flex items-center justify-center text-amber-500">
+                    <User size={20} />
+                </div>
+                <div>
+                    <div className="text-white font-black text-sm md:text-lg leading-tight truncate max-w-[120px]">{profile.name}</div>
+                    <div className="text-amber-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest">Patente: Ás</div>
+                </div>
+            </div>
+        </div>
 
-            <button onClick={onStart} className="group relative px-6 py-4 md:px-8 md:py-6 bg-white text-black font-black text-xl md:text-2xl skew-x-[-15deg] transition-all hover:bg-amber-500 hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] active:scale-95">
-                <div className="skew-x-[15deg] flex items-center justify-center md:justify-start gap-4"><Play fill="black" size={24} /> START MISSION</div>
+        {/* Center/Right Section: Main Actions */}
+        <div className="pointer-events-auto flex flex-col gap-3 w-full max-w-[280px] md:max-w-xs mt-auto md:mt-0">
+            <button onClick={onStart} className="group relative px-6 py-4 bg-white text-black font-black text-lg md:text-xl skew-x-[-15deg] transition-all hover:bg-amber-500 hover:shadow-[0_0_30px_rgba(245,158,11,0.4)] active:scale-95">
+                <div className="skew-x-[15deg] flex items-center justify-center gap-3 uppercase"><Play fill="black" size={20} /> Decolar</div>
             </button>
 
-            <div className="grid grid-cols-2 gap-3 md:gap-4 mt-2">
-                <button onClick={()=>setScreen('GARAGE')} className="p-3 md:p-4 bg-white/5 border border-white/10 text-white font-bold text-sm md:text-base skew-x-[-15deg] hover:bg-white/10 transition-all active:scale-95">
-                    <div className="skew-x-[15deg] flex items-center justify-center gap-2"><ShoppingCart size={16}/> HANGAR</div>
+            <div className="grid grid-cols-2 gap-2">
+                <button onClick={()=>setScreen('GARAGE')} className="p-3 bg-white/5 border border-white/10 text-white font-bold text-xs skew-x-[-15deg] hover:bg-white/10 transition-all uppercase">
+                    <div className="skew-x-[15deg] flex items-center justify-center gap-2"><ShoppingCart size={14}/> Hangar</div>
                 </button>
-                <button onClick={()=>setScreen('PROFILE')} className="p-3 md:p-4 bg-white/5 border border-white/10 text-white font-bold text-sm md:text-base skew-x-[-15deg] hover:bg-white/10 transition-all active:scale-95">
-                    <div className="skew-x-[15deg] flex items-center justify-center gap-2"><User size={16}/> PILOT</div>
+                <button onClick={()=>setScreen('PROFILE')} className="p-3 bg-white/5 border border-white/10 text-white font-bold text-xs skew-x-[-15deg] hover:bg-white/10 transition-all uppercase">
+                    <div className="skew-x-[15deg] flex items-center justify-center gap-2"><User size={14}/> Perfil</div>
                 </button>
             </div>
-
-            <button onClick={()=>setScreen('SETTINGS')} className="p-3 md:p-4 bg-white/5 border border-white/10 text-white font-bold text-sm md:text-base skew-x-[-15deg] hover:bg-white/10 transition-all active:scale-95">
-                <div className="skew-x-[15deg] flex items-center justify-center gap-2"><Settings size={16}/> SETTINGS</div>
-            </button>
+            
+            <button onClick={()=>setScreen('SETTINGS')} className="p-2 text-slate-500 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-all">Configurações de Voo</button>
         </div>
         
-        <div className="absolute top-6 right-6 md:top-12 md:right-12 pointer-events-auto flex items-center gap-3 md:gap-4 scale-90 md:scale-100">
+        {/* Balance Corner */}
+        <div className="absolute top-6 right-6 pointer-events-auto flex items-center gap-3 scale-75 md:scale-100">
             <div className="text-right">
-                <div className="text-[8px] md:text-[10px] text-amber-500 font-bold tracking-widest uppercase">Balance</div>
-                <div className="text-xl md:text-2xl font-black text-white">{profile.coins.toLocaleString()} <span className="text-[10px] opacity-50">CR</span></div>
+                <div className="text-[10px] text-amber-500 font-bold tracking-widest uppercase leading-none">Saldo</div>
+                <div className="text-xl font-black text-white">{profile.coins.toLocaleString()} <span className="text-[10px] opacity-50 italic">CR</span></div>
             </div>
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center">
-                <Coins className="text-amber-500" size={20} />
+            <div className="w-10 h-10 bg-amber-500 flex items-center justify-center rounded-sm rotate-45">
+                <Coins className="text-black -rotate-45" size={20} />
             </div>
         </div>
     </div>
@@ -95,99 +102,63 @@ export const RoomSelection = ({ onJoin, onBack }: any) => {
         setNewRoomCode(res);
     };
 
-    if (mode === 'CREATE') {
-        return (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
-                <GlassPanel className="w-full max-w-xl p-6 md:p-12 text-center">
-                    <h2 className="text-3xl md:text-5xl font-black italic text-white mb-2">CREATE MISSION</h2>
-                    <p className="text-slate-500 mb-12 tracking-widest uppercase text-[10px] md:text-xs">Setup your private operational sector</p>
-                    
-                    <div className="bg-black/40 border border-white/10 p-8 rounded-lg mb-8 relative group">
-                        <div className="text-[10px] text-amber-500 font-bold tracking-widest uppercase mb-4">Assigned Room Code</div>
-                        <div className="text-5xl md:text-7xl font-black text-white tracking-widest mb-6">{newRoomCode || "------"}</div>
-                        <button onClick={generateCode} className="flex items-center gap-2 mx-auto text-amber-500 hover:text-white transition-colors font-bold text-xs uppercase tracking-tighter">
-                            <RefreshCw size={14} /> Generate New Code
-                        </button>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                        <button 
-                            disabled={!newRoomCode}
-                            onClick={() => onJoin(newRoomCode)}
-                            className="w-full py-5 bg-white text-black font-black text-xl skew-x-[-10deg] hover:bg-amber-500 transition-all active:scale-95 disabled:opacity-30"
-                        >
-                            <span className="skew-x-[10deg] block">INITIATE DEPLOYMENT</span>
-                        </button>
-                        <button onClick={() => setMode('SELECT')} className="text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] mt-4">Cancel Request</button>
-                    </div>
-                </GlassPanel>
-            </div>
-        );
-    }
-
-    if (mode === 'JOIN') {
-        return (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
-                <GlassPanel className="w-full max-w-xl p-6 md:p-12">
-                    <h2 className="text-3xl md:text-5xl font-black italic text-white mb-2">JOIN PRIVATE</h2>
-                    <p className="text-slate-500 mb-12 tracking-widest uppercase text-[10px] md:text-xs">Enter specialized mission code</p>
-                    
-                    <div className="flex flex-col gap-6">
-                        <input 
-                            autoFocus
-                            value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}
-                            className="w-full bg-white/5 border border-white/10 p-5 text-white font-black tracking-[0.5em] text-3xl text-center outline-none focus:border-amber-500 transition-all skew-x-[-5deg]" 
-                            placeholder="CODE" 
-                        />
-                        <button 
-                            disabled={joinCode.length < 3}
-                            onClick={() => onJoin(joinCode)}
-                            className="w-full py-5 bg-amber-500 text-black font-black text-xl skew-x-[-10deg] hover:bg-amber-400 transition-all active:scale-95 disabled:opacity-30"
-                        >
-                            <span className="skew-x-[10deg] block">LINK TO SECTOR</span>
-                        </button>
-                        <button onClick={() => setMode('SELECT')} className="text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] mt-4 mx-auto">Back to Comms</button>
-                    </div>
-                </GlassPanel>
-            </div>
-        );
-    }
-
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
-            <GlassPanel className="w-full max-w-xl p-6 md:p-12">
-                <h2 className="text-3xl md:text-5xl font-black italic text-white mb-1 md:mb-2">LOBBY SELECT</h2>
-                <p className="text-slate-500 mb-8 md:mb-12 tracking-widest uppercase text-[10px] md:text-xs">Choose your operational theatre</p>
-                
-                <div className="grid grid-cols-1 gap-4">
-                    {/* Global Option */}
-                    <button onClick={()=>onJoin('GLOBAL')} className="flex items-center justify-between p-5 md:p-6 bg-slate-800 border border-white/5 text-white font-black text-lg md:text-xl skew-x-[-10deg] hover:bg-slate-700 transition-all active:scale-95 group">
-                        <div className="skew-x-[10deg] flex items-center gap-3 md:gap-4"><Globe className="text-cyan-400 group-hover:animate-pulse" /> GLOBAL THEATRE</div>
-                        <span className="skew-x-[10deg] text-[10px] text-cyan-400 font-bold tracking-widest">OPEN</span>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 font-rajdhani">
+            <GlassPanel className="w-full max-w-lg p-6 md:p-10 flex flex-col items-center">
+                {mode === 'SELECT' && (
+                    <>
+                        <h2 className="text-3xl font-black italic text-white mb-2 uppercase">Selecionar Setor</h2>
+                        <div className="w-full space-y-3 mt-6">
+                            <button onClick={()=>onJoin('GLOBAL')} className="w-full flex items-center justify-between p-4 bg-amber-500 text-black font-black text-lg skew-x-[-10deg] hover:bg-amber-400 active:scale-95 transition-all">
+                                <div className="skew-x-[10deg] flex items-center gap-3"><Globe size={20} /> SETOR GLOBAL</div>
+                                <span className="skew-x-[10deg] text-[10px] font-bold tracking-widest bg-black/20 px-2 py-0.5 rounded">ONLINE</span>
+                            </button>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={()=>{generateCode(); setMode('CREATE')}} className="p-4 bg-white/5 border border-white/10 text-white font-bold text-sm uppercase skew-x-[-10deg] hover:bg-white/10 transition-all active:scale-95">
+                                    <div className="skew-x-[10deg] flex items-center justify-center gap-2"><PlusSquare size={16} /> Criar</div>
+                                </button>
+                                <button onClick={()=>setMode('JOIN')} className="p-4 bg-white/5 border border-white/10 text-white font-bold text-sm uppercase skew-x-[-10deg] hover:bg-white/10 transition-all active:scale-95">
+                                    <div className="skew-x-[10deg] flex items-center justify-center gap-2"><LockKeyhole size={16} /> Entrar</div>
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
+
+                {mode === 'CREATE' && (
+                    <>
+                        <h2 className="text-3xl font-black italic text-white mb-1 uppercase">Criar Missão</h2>
+                        <p className="text-slate-500 text-[10px] tracking-widest uppercase mb-8 text-center">Código da Operação Gerado</p>
+                        <div className="bg-black/50 border border-white/10 p-6 rounded-lg mb-8 w-full text-center">
+                            <div className="text-5xl font-black text-white tracking-[0.2em]">{newRoomCode}</div>
+                        </div>
+                        <button onClick={() => onJoin(newRoomCode)} className="w-full py-4 bg-amber-500 text-black font-black text-lg skew-x-[-10deg] hover:bg-amber-400 active:scale-95 transition-all mb-4">
+                            <span className="skew-x-[10deg]">INICIAR OPERAÇÃO</span>
+                        </button>
+                        <button onClick={()=>setMode('SELECT')} className="text-slate-500 text-xs font-bold uppercase tracking-widest hover:text-white">Cancelar</button>
+                    </>
+                )}
+
+                {mode === 'JOIN' && (
+                    <>
+                        <h2 className="text-3xl font-black italic text-white mb-6 uppercase">Entrar em Setor</h2>
+                        <input 
+                            autoFocus value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}
+                            className="w-full bg-white/5 border border-white/10 p-4 text-white font-black tracking-[0.5em] text-2xl text-center outline-none focus:border-amber-500 transition-all mb-4" 
+                            placeholder="CÓDIGO" 
+                        />
+                        <button onClick={() => onJoin(joinCode)} disabled={joinCode.length < 3} className="w-full py-4 bg-white text-black font-black text-lg skew-x-[-10deg] hover:bg-amber-500 transition-all disabled:opacity-30 mb-4">
+                            <span className="skew-x-[10deg]">CONECTAR AO RADAR</span>
+                        </button>
+                        <button onClick={()=>setMode('SELECT')} className="text-slate-500 text-xs font-bold uppercase tracking-widest hover:text-white">Cancelar</button>
+                    </>
+                )}
+
+                {mode === 'SELECT' && (
+                    <button onClick={onBack} className="mt-8 text-slate-500 hover:text-white flex items-center gap-2 font-bold uppercase tracking-widest text-[10px]">
+                        <ChevronLeft size={14} /> Voltar ao Menu
                     </button>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Create Option */}
-                        <button onClick={()=>{generateCode(); setMode('CREATE')}} className="flex flex-col items-center justify-center p-6 bg-amber-500 text-black font-black skew-x-[-10deg] hover:bg-amber-400 transition-all active:scale-95">
-                            <div className="skew-x-[10deg] flex flex-col items-center gap-2">
-                                <PlusSquare size={24} />
-                                <span className="text-xs tracking-widest uppercase">Create Room</span>
-                            </div>
-                        </button>
-
-                        {/* Join Option */}
-                        <button onClick={()=>setMode('JOIN')} className="flex flex-col items-center justify-center p-6 bg-white text-black font-black skew-x-[-10deg] hover:bg-slate-200 transition-all active:scale-95">
-                            <div className="skew-x-[10deg] flex flex-col items-center gap-2">
-                                <LockKeyhole size={24} />
-                                <span className="text-xs tracking-widest uppercase">Join Code</span>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <button onClick={onBack} className="mt-12 text-slate-500 hover:text-white flex items-center gap-2 font-bold uppercase tracking-widest text-[10px] md:text-xs mx-auto">
-                    <ChevronLeft size={14} /> Return to Main Deck
-                </button>
+                )}
             </GlassPanel>
         </div>
     );
@@ -199,66 +170,52 @@ export const Garage = ({ profile, onEquip, onBuy, onUpgrade, onClose }: any) => 
     const owned = profile.unlockedSkins.includes(selId);
 
     return (
-        <div className="absolute inset-0 z-50 flex flex-col md:flex-row font-rajdhani">
-            <div className="w-full md:w-80 lg:w-96 bg-slate-950/90 border-b md:border-b-0 md:border-r border-white/10 p-4 md:p-8 flex flex-col backdrop-blur-2xl max-h-[40vh] md:max-h-none">
-                <button onClick={onClose} className="flex items-center gap-2 text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] md:text-xs mb-4 md:mb-12"><ChevronLeft size={14}/> Back</button>
-                <h2 className="text-2xl md:text-4xl font-black italic text-white mb-4 md:mb-8">HANGAR</h2>
+        <div className="absolute inset-0 z-50 flex flex-col md:flex-row font-rajdhani overflow-hidden">
+            <div className="w-full md:w-80 bg-slate-950/90 border-b md:border-b-0 md:border-r border-white/10 p-4 md:p-8 flex flex-col backdrop-blur-2xl">
+                <button onClick={onClose} className="flex items-center gap-2 text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] mb-6"><ChevronLeft size={14}/> Voltar</button>
+                <h2 className="text-3xl font-black italic text-white mb-6 uppercase">Hangar</h2>
                 
-                <div className="flex-1 space-y-2 md:space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar max-h-[30vh] md:max-h-none">
                     {SKINS.map(s => (
-                        <button key={s.id} onClick={()=>setSelId(s.id)} className={`w-full p-3 md:p-4 flex items-center justify-between border-l-2 md:border-l-4 transition-all ${selId===s.id?'bg-white/10 border-amber-500':'bg-transparent border-transparent hover:bg-white/5'}`}>
+                        <button key={s.id} onClick={()=>setSelId(s.id)} className={`w-full p-3 flex items-center justify-between border-l-2 transition-all ${selId===s.id?'bg-white/10 border-amber-500':'bg-transparent border-transparent hover:bg-white/5'}`}>
                             <div className="text-left">
-                                <div className="font-bold text-white text-sm md:text-base">{s.name}</div>
-                                <div className="text-[9px] md:text-[10px] text-slate-500 uppercase">{s.price===0?'Standard':'Prototype'}</div>
+                                <div className="font-bold text-white text-sm">{s.name}</div>
+                                <div className="text-[8px] text-slate-500 uppercase">{s.price===0?'SÉRIE PILOTO':'PROTÓTIPO'}</div>
                             </div>
                             {profile.unlockedSkins.includes(s.id)?<Check size={12} className="text-green-500"/>:<Lock size={12} className="text-slate-600"/>}
                         </button>
                     ))}
                 </div>
 
-                <div className="mt-4 md:mt-8 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-4">
-                    <div className="p-3 md:p-4 bg-white/5 border border-white/5 rounded">
-                        <div className="flex justify-between items-center mb-1 md:mb-2">
-                            <span className="text-[8px] md:text-[10px] text-amber-500 font-bold uppercase"><Zap size={10} className="inline mr-1"/> Turbo</span>
-                            <span className="text-[9px] md:text-xs text-white">L{profile.upgrades.turbo}</span>
+                <div className="mt-6 flex flex-col gap-2">
+                    <div className="p-3 bg-white/5 rounded">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-[8px] text-amber-500 font-bold uppercase">Turbo</span>
+                            <span className="text-[10px] text-white">L{profile.upgrades.turbo}</span>
                         </div>
-                        <div className="flex gap-1 h-1 bg-white/10 mb-2">
+                        <div className="flex gap-1 h-0.5 bg-white/10 mb-2">
                             {[1,2,3,4,5].map(i=><div key={i} className={`flex-1 ${profile.upgrades.turbo>=i?'bg-amber-500':'bg-transparent'}`}/>)}
                         </div>
-                        <button onClick={()=>onUpgrade('turbo')} disabled={profile.upgrades.turbo>=5 || profile.coins<500} className="w-full py-1 md:py-2 bg-amber-500/20 text-amber-500 font-bold text-[8px] md:text-[10px] uppercase transition-all disabled:opacity-30">Upgrade</button>
-                    </div>
-
-                    <div className="p-3 md:p-4 bg-white/5 border border-white/5 rounded">
-                        <div className="flex justify-between items-center mb-1 md:mb-2">
-                            <span className="text-[8px] md:text-[10px] text-cyan-400 font-bold uppercase"><Shield size={10} className="inline mr-1"/> Aero</span>
-                            <span className="text-[9px] md:text-xs text-white">L{profile.upgrades.handling}</span>
-                        </div>
-                        <div className="flex gap-1 h-1 bg-white/10 mb-2">
-                            {[1,2,3,4,5].map(i=><div key={i} className={`flex-1 ${profile.upgrades.handling>=i?'bg-cyan-400':'bg-transparent'}`}/>)}
-                        </div>
-                        <button onClick={()=>onUpgrade('handling')} disabled={profile.upgrades.handling>=5 || profile.coins<500} className="w-full py-1 md:py-2 bg-cyan-400/20 text-cyan-400 font-bold text-[8px] md:text-[10px] uppercase transition-all disabled:opacity-30">Upgrade</button>
+                        <button onClick={()=>onUpgrade('turbo')} disabled={profile.upgrades.turbo>=5 || profile.coins<500} className="w-full py-1.5 bg-amber-500/10 text-amber-500 font-bold text-[8px] uppercase disabled:opacity-30">Melhorar</button>
                     </div>
                 </div>
             </div>
 
-            <div className="flex-1 relative pointer-events-none md:pointer-events-auto">
-                <div className="absolute bottom-6 md:bottom-12 right-6 md:right-12 flex flex-col items-center md:items-end gap-4 md:gap-6 pointer-events-auto w-[calc(100%-3rem)] md:w-auto">
-                    <GlassPanel className="p-6 md:p-10 w-full md:w-96">
-                        <div className="text-[10px] text-amber-500 font-bold tracking-widest mb-1 md:mb-2 uppercase">Specifications</div>
-                        <h3 className="text-3xl md:text-5xl font-black italic text-white mb-1">{skin.name}</h3>
-                        <p className="text-slate-500 text-xs md:text-sm mb-6 md:mb-8">Combat-ready aerospace technology.</p>
-                        
-                        {owned ? (
-                            <button onClick={()=>onEquip(selId)} disabled={profile.equippedSkin===selId} className="w-full py-4 md:py-5 bg-white text-black font-black text-lg md:text-xl skew-x-[-15deg] hover:bg-amber-500 transition-all disabled:opacity-30 active:scale-95">
-                                <span className="skew-x-[15deg] block">{profile.equippedSkin===selId?'ACTIVE':'DEPLOY'}</span>
-                            </button>
-                        ) : (
-                            <button onClick={()=>onBuy(selId)} disabled={profile.coins<skin.price} className="w-full py-4 md:py-5 bg-amber-500 text-black font-black text-lg md:text-xl skew-x-[-15deg] hover:bg-amber-400 transition-all disabled:opacity-30 active:scale-95">
-                                <span className="skew-x-[15deg] block">BUY {skin.price} CR</span>
-                            </button>
-                        )}
-                    </GlassPanel>
-                </div>
+            <div className="flex-1 relative flex items-end justify-center md:justify-end p-6 md:p-12 pointer-events-none md:pointer-events-auto">
+                <GlassPanel className="p-6 w-full max-w-sm">
+                    <h3 className="text-3xl font-black italic text-white mb-1 uppercase">{skin.name}</h3>
+                    <p className="text-slate-500 text-xs mb-6 uppercase tracking-widest">Tecnologia Aeroespacial Avançada</p>
+                    
+                    {owned ? (
+                        <button onClick={()=>onEquip(selId)} disabled={profile.equippedSkin===selId} className="w-full py-4 bg-white text-black font-black text-lg skew-x-[-15deg] hover:bg-amber-500 active:scale-95 transition-all disabled:opacity-30">
+                            <span className="skew-x-[15deg] block">{profile.equippedSkin===selId?'EM USO':'EQUIPAR'}</span>
+                        </button>
+                    ) : (
+                        <button onClick={()=>onBuy(selId)} disabled={profile.coins<skin.price} className="w-full py-4 bg-amber-500 text-black font-black text-lg skew-x-[-15deg] hover:bg-amber-400 active:scale-95 transition-all disabled:opacity-30">
+                            <span className="skew-x-[15deg] block">COMPRAR - {skin.price} CR</span>
+                        </button>
+                    )}
+                </GlassPanel>
             </div>
         </div>
     );
@@ -267,32 +224,29 @@ export const Garage = ({ profile, onEquip, onBuy, onUpgrade, onClose }: any) => 
 export const ProfileScreen = ({ profile, onRedeemCode, onClose }: any) => {
     const [code, setCode] = useState("");
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-2xl p-4 font-rajdhani">
-            <GlassPanel className="w-full max-w-2xl p-6 md:p-16">
-                <div className="flex justify-between items-start mb-8 md:mb-12">
-                    <div>
-                        <h2 className="text-4xl md:text-6xl font-black italic text-white leading-tight">PILOT<br/>DOSSIER</h2>
-                        <div className="h-1 w-16 md:w-24 bg-amber-500 mt-2 md:mt-4"></div>
-                    </div>
-                    <button onClick={onClose} className="p-2"><X className="text-slate-500 hover:text-white" size={28} /></button>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 font-rajdhani">
+            <GlassPanel className="w-full max-w-xl p-8 md:p-12">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-3xl md:text-5xl font-black italic text-white uppercase">Perfil do Piloto</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-all"><X className="text-slate-500 hover:text-white" size={24} /></button>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 md:gap-8 mb-8 md:mb-12">
-                    <div className="bg-white/5 p-4 md:p-6 border-l-2 border-amber-500">
-                        <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mb-1">Callsign</div>
-                        <div className="text-xl md:text-3xl text-white font-black truncate">{profile.name}</div>
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="bg-white/5 p-4 border-l-2 border-amber-500">
+                        <div className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Callsign</div>
+                        <div className="text-lg md:text-xl text-white font-black">{profile.name}</div>
                     </div>
-                    <div className="bg-white/5 p-4 md:p-6 border-l-2 border-cyan-500">
-                        <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mb-1">Missions</div>
-                        <div className="text-xl md:text-3xl text-white font-black tabular-nums">{profile.stats.flights}</div>
+                    <div className="bg-white/5 p-4 border-l-2 border-cyan-500">
+                        <div className="text-[8px] text-slate-500 font-bold tracking-widest uppercase mb-1">Missões Concluídas</div>
+                        <div className="text-lg md:text-xl text-white font-black">{profile.stats.flights}</div>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 md:gap-4">
-                    <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Secret Operations Code</div>
-                    <div className="flex flex-col md:flex-row gap-2">
-                        <input value={code} onChange={e=>setCode(e.target.value)} className="flex-1 bg-black border border-white/10 p-3 md:p-5 text-white font-black tracking-[0.2em] md:tracking-[0.5em] outline-none focus:border-amber-500 text-sm md:text-base uppercase" placeholder="ENTER CODE" />
-                        <button onClick={()=>{onRedeemCode(code); setCode("")}} className="py-3 md:py-0 px-10 bg-white text-black font-black hover:bg-amber-500 transition-all active:scale-95">SUBMIT</button>
+                <div className="flex flex-col gap-2">
+                    <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Código Secreto</div>
+                    <div className="flex gap-2">
+                        <input value={code} onChange={e=>setCode(e.target.value)} className="flex-1 bg-black/50 border border-white/10 p-3 text-white font-black tracking-widest outline-none focus:border-amber-500 text-sm uppercase" placeholder="INSERIR CÓDIGO" />
+                        <button onClick={()=>{onRedeemCode(code); setCode("")}} className="px-6 bg-white text-black font-black hover:bg-amber-500 transition-all uppercase text-xs">Ativar</button>
                     </div>
                 </div>
             </GlassPanel>
@@ -301,32 +255,30 @@ export const ProfileScreen = ({ profile, onRedeemCode, onClose }: any) => {
 };
 
 export const SettingsScreen = ({ profile, updateSettings, onClose }: any) => (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-2xl p-4 font-rajdhani">
-        <GlassPanel className="w-full max-w-xl p-6 md:p-12">
-            <div className="flex justify-between items-center mb-8 md:mb-12">
-                <h2 className="text-3xl md:text-5xl font-black italic text-white">SYSTEMS</h2>
-                <button onClick={onClose} className="p-2"><X className="text-slate-500 hover:text-white" size={28} /></button>
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-sm p-4 font-rajdhani">
+        <GlassPanel className="w-full max-w-md p-8 md:p-10">
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-black italic text-white uppercase">Sistemas</h2>
+                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-all"><X className="text-slate-500 hover:text-white" size={24} /></button>
             </div>
             
-            <div className="space-y-6 md:space-y-8">
-                <div className="space-y-3 md:space-y-4">
-                    <div className="flex justify-between text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest"><span>Music Volume</span><span>{Math.round(profile.settings.musicVolume*100)}%</span></div>
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest"><span>Volume Música</span><span>{Math.round(profile.settings.musicVolume*100)}%</span></div>
                     <input type="range" max="1" step="0.05" value={profile.settings.musicVolume} onChange={e=>updateSettings('musicVolume', parseFloat(e.target.value))} className="w-full accent-amber-500 h-1 bg-white/10 rounded-full cursor-pointer" />
                 </div>
-                <div className="space-y-3 md:space-y-4">
-                    <div className="flex justify-between text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest"><span>SFX Volume</span><span>{Math.round(profile.settings.sfxVolume*100)}%</span></div>
+                <div className="space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest"><span>Volume Efeitos</span><span>{Math.round(profile.settings.sfxVolume*100)}%</span></div>
                     <input type="range" max="1" step="0.05" value={profile.settings.sfxVolume} onChange={e=>updateSettings('sfxVolume', parseFloat(e.target.value))} className="w-full accent-amber-500 h-1 bg-white/10 rounded-full cursor-pointer" />
                 </div>
                 
-                <div className="flex items-center justify-between p-4 md:p-6 bg-white/5 border border-white/5">
-                    <div className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Inverted Pitch</div>
-                    <button onClick={()=>updateSettings('invertedLook', !profile.settings.invertedLook)} className={`w-12 md:w-14 h-6 md:h-7 rounded-full transition-all relative ${profile.settings.invertedLook?'bg-amber-500':'bg-white/10'}`}>
-                        <div className={`absolute top-1 w-4 md:w-5 h-4 md:h-5 rounded-full bg-white transition-all ${profile.settings.invertedLook?'left-7 md:left-8':'left-1'}`}></div>
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/5">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inverter Eixo Y</div>
+                    <button onClick={()=>updateSettings('invertedLook', !profile.settings.invertedLook)} className={`w-12 h-6 rounded-full transition-all relative ${profile.settings.invertedLook?'bg-amber-500':'bg-white/10'}`}>
+                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${profile.settings.invertedLook?'left-7':'left-1'}`}></div>
                     </button>
                 </div>
             </div>
-
-            <div className="mt-8 md:mt-12 text-center text-[9px] text-slate-700 font-mono tracking-widest uppercase">SKY-ACE ENGINE v4.2.0 STABLE</div>
         </GlassPanel>
     </div>
 );

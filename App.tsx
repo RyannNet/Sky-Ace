@@ -140,10 +140,10 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
 
     let currentRegion = "Espaço Aéreo";
     const pos = planePosition.current;
-    if (pos.z > -100 && Math.abs(pos.x) < 1000) currentRegion = "Aeroporto Central";
-    else if (pos.z < -1000 && pos.z > -4500 && Math.abs(pos.x) < 2000) currentRegion = "Metrópole Neon";
-    else if (pos.x > 2000) currentRegion = "Reserva Florestal";
-    else if (pos.x < -2000) currentRegion = "Deserto de Cristal";
+    if (pos.z > -100 && Math.abs(pos.x) < 1500) currentRegion = "Aeroporto Central";
+    else if (pos.z < -1000 && pos.z > -6000 && Math.abs(pos.x) < 3000) currentRegion = "Metrópole Neon";
+    else if (pos.x > 5000) currentRegion = "Reserva Florestal";
+    else if (pos.x < -5000) currentRegion = "Deserto de Cristal";
 
     if (currentRegion !== lastRegion.current) {
         onRegionChange(currentRegion, lastRegion.current);
@@ -240,7 +240,8 @@ export default function App() {
     <div className="w-full h-full relative bg-slate-950 overflow-hidden font-rajdhani">
         {screen === 'SPLASH' && <SplashScreen onStart={handleStartApp} />}
         {screen === 'LOADING' && <LoadingScreen />}
-        <Canvas shadows camera={{ position: [5, 5, 410], fov: 60, far: 50000 }}>
+        {/* Extreme far distance for infinite world feel */}
+        <Canvas shadows camera={{ position: [5, 5, 410], fov: 60, far: 100000 }}>
             <SoundManager throttle={0} speed={0} isPaused={false} isGameOver={false} volume={{music:profile.settings.musicVolume, sfx:profile.settings.sfxVolume}} customAudio={profile.customAudio} triggerSfx={null} />
             {screen === 'GAME' ? (
                 <GameLoop 
