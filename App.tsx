@@ -1,38 +1,33 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Vector3, Quaternion, Euler, MathUtils, Group } from 'three';
 import { io, Socket } from 'socket.io-client';
 import { PlaneModel } from './components/Plane';
 import { World } from './components/World';
 import { HUD } from './components/HUD';
-import { MainMenu, Garage, ProfileScreen, SettingsScreen, LoadingScreen } from './components/Menus';
+import { MainMenu, Garage, ProfileScreen, SettingsScreen, LoadingScreen, RoomSelection } from './components/Menus';
 import { SoundManager } from './components/SoundManager';
 import { MobileControls } from './components/Controls';
-import { GameState, FlightData, ControlsState, GRAVITY, MAX_SPEED, STALL_SPEED, MAX_FUEL, PlayerProfile, SKINS, MapObject, MapObjectType, NetworkPlayerData } from './types';
-import { v4 as uuidv4 } from 'uuid';
+import { GameState, FlightData, ControlsState, GRAVITY, MAX_FUEL, PlayerProfile, SKINS, MapObject, NetworkPlayerData, MAX_SPEED_BASE, STALL_SPEED } from './types';
 
-// --- INITIAL MAP DATA ---
 const INITIAL_MAP_DATA: MapObject[] = [
     { id: 'canyon-1', type: 'BUILDING_TALL', position: [-80, 0, -400], scale: [30, 180, 30] },
     { id: 'canyon-2', type: 'BUILDING_TALL', position: [80, 0, -400], scale: [30, 200, 30] },
-    { id: 'canyon-3', type: 'BUILDING_TALL', position: [-90, 0, -600], scale: [40, 220, 40] },
-    { id: 'canyon-4', type: 'BUILDING_TALL', position: [90, 0, -600], scale: [40, 150, 40] },
     { id: 'slalom-1', type: 'PYRAMID', position: [0, 0, -1200], scale: [60, 60, 60] },
-    { id: 'gate-1', type: 'BUILDING_TALL', position: [-150, 0, -3000], scale: [50, 300, 50] },
-    { id: 'gate-2', type: 'BUILDING_TALL', position: [150, 0, -3000], scale: [50, 300, 50] },
 ];
 
 const loadProfile = (): PlayerProfile => {
     try {
-        const saved = localStorage.getItem('skyace_profile_v6'); 
+        const saved = localStorage.getItem('skyace_v7_profile');
         if (saved) return JSON.parse(saved);
     } catch (e) {}
     return {
-        name: "Piloto_" + Math.floor(Math.random() * 999),
-        coins: 500,
-        unlockedSkins: ['default'], 
+        name: "Pilot_" + Math.floor(Math.random() * 9999),
+        coins: 1000,
+        unlockedSkins: ['default'],
         equippedSkin: 'default',
+        upgrades: { turbo: 1, handling: 1 },
         stats: { flights: 0, crashes: 0, flightTime: 0, maxAltitude: 0 },
         settings: { musicVolume: 0.5, sfxVolume: 0.5, sensitivity: 1.0, invertedLook: false },
         customAudio: { engine: '', idle: '', music: '', click: '', coin: '', buy: '', win: '' }
@@ -51,20 +46,22 @@ const NetworkPlane: React.FC<{ data: NetworkPlayerData }> = ({ data }) => {
     return <PlaneModel ref={groupRef} playerName={data.name} skin={skin} physicsPosition={new Vector3(data.x, data.y, data.z)} showNameTag={true} />;
 };
 
-function GameLoop({ 
-  onUpdate, onGameOver, controls, gameState, cameraMode, profile, onAddCoin, mapObjects, isVoiceEnabled, setVoiceStatus, setPlayerCount, setNetworkStatus, handlePlaceObject, handleRemoveObject
-}: any) {
+function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profile, setPlayerCount, setNetworkStatus, chatMessages, setChatMessages }: any) {
   const planeRef = useRef<Group>(null);
-  const planePosition = useRef(new Vector3((Math.random() - 0.5) * 5, 0, 400)); 
+  const planePosition = useRef(new Vector3((Math.random() - 0.5) * 10, 0, 400));
   const planeRotation = useRef(new Quaternion());
-  const planeEuler = useRef(new Euler(0, 0, 0)); 
+  const planeEuler = useRef(new Euler(0, 0, 0));
   const speedRef = useRef(0);
-  const throttleRef = useRef(0); 
+  const throttleRef = useRef(0);
   const { camera } = useThree();
 
   const socketRef = useRef<Socket | null>(null);
   const [networkPlayers, setNetworkPlayers] = useState<Record<string, NetworkPlayerData>>({});
   const updateTimer = useRef(0);
+
+  // Stats from Upgrades
+  const maxSpeed = MAX_SPEED_BASE + (profile.upgrades.turbo - 1) * 25;
+  const handlingMult = 1 + (profile.upgrades.handling - 1) * 0.15;
 
   useEffect(() => {
     const socket = io({ transports: ['websocket'], upgrade: false });
@@ -72,25 +69,27 @@ function GameLoop({
 
     socket.on('connect', () => {
         setNetworkStatus("CONNECTED");
-        socket.emit('join', { name: profile.name, skin: profile.equippedSkin });
+        socket.emit('join', { name: profile.name, skin: profile.equippedSkin, room: gameState.currentRoom });
     });
 
-    socket.on('disconnect', () => setNetworkStatus("DISCONNECTED"));
-    socket.on('connect_error', () => setNetworkStatus("ERROR"));
-
     socket.on('currentPlayers', (players: any) => {
-        const others = { ...players };
-        if (socket.id) delete others[socket.id];
+        const others: Record<string, NetworkPlayerData> = {};
+        let count = 0;
+        Object.keys(players).forEach(id => {
+            if (id !== socket.id && players[id].room === gameState.currentRoom) {
+                others[id] = players[id];
+            }
+            if (players[id].room === gameState.currentRoom) count++;
+        });
         setNetworkPlayers(others);
-        setPlayerCount(Object.keys(players).length);
+        setPlayerCount(count);
     });
 
     socket.on('playerJoined', (player: any) => {
-        setNetworkPlayers(prev => {
-            const next = { ...prev, [player.id]: player };
-            setPlayerCount(Object.keys(next).length + 1);
-            return next;
-        });
+        if (player.room === gameState.currentRoom) {
+            setNetworkPlayers(prev => ({ ...prev, [player.id]: player }));
+            setPlayerCount((c: number) => c + 1);
+        }
     });
 
     socket.on('playerMoved', ({ id, data }: any) => {
@@ -100,35 +99,40 @@ function GameLoop({
     socket.on('playerLeft', (id: string) => {
         setNetworkPlayers(prev => {
             const next = { ...prev };
-            delete next[id];
-            setPlayerCount(Object.keys(next).length + 1);
+            if (next[id]) {
+                delete next[id];
+                setPlayerCount((c: number) => Math.max(1, c - 1));
+            }
             return next;
         });
     });
 
+    socket.on('chatMessage', (msg: any) => {
+        if (msg.room === gameState.currentRoom) {
+            setChatMessages((prev: any) => [...prev, msg].slice(-5));
+        }
+    });
+
     return () => { socket.disconnect(); };
-  }, [profile.name]);
+  }, [profile.name, gameState.currentRoom]);
 
   useFrame((state, delta) => {
     if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return;
+    const dt = Math.min(delta, 0.1);
 
-    const dt = Math.min(delta, 0.1); 
+    if (controls.current.throttleUp) throttleRef.current = Math.min(throttleRef.current + 0.6 * dt, 1);
+    if (controls.current.throttleDown) throttleRef.current = Math.max(throttleRef.current - 0.6 * dt, 0);
 
-    // Controls
-    if (controls.current.throttleUp) throttleRef.current = Math.min(throttleRef.current + 0.5 * dt, 1);
-    if (controls.current.throttleDown) throttleRef.current = Math.max(throttleRef.current - 0.5 * dt, 0);
-
-    const pitchInput = (controls.current.pitchUp ? 1 : 0) - (controls.current.pitchDown ? 1 : 0) + (controls.current.joyPitch || 0);
-    const rollInput = (controls.current.rollLeft ? 1 : 0) - (controls.current.rollRight ? 1 : 0) - (controls.current.joyRoll || 0);
+    const pitchInput = ((controls.current.pitchUp ? 1 : 0) - (controls.current.pitchDown ? 1 : 0) + (controls.current.joyPitch || 0)) * handlingMult;
+    const rollInput = ((controls.current.rollLeft ? 1 : 0) - (controls.current.rollRight ? 1 : 0) - (controls.current.joyRoll || 0)) * handlingMult;
     const finalPitch = profile.settings.invertedLook ? -pitchInput : pitchInput;
 
     const isGrounded = planePosition.current.y <= 0.1;
-    const airSpeed = speedRef.current;
-    const authority = Math.min(airSpeed / 60, 1.0) * profile.settings.sensitivity; 
+    const authority = Math.min(speedRef.current / 60, 1.0) * profile.settings.sensitivity;
 
     if (isGrounded) {
-        planeEuler.current.y += rollInput * dt * Math.max(0.2, 1 - (airSpeed / MAX_SPEED)); 
-        if (airSpeed > 60 && finalPitch > 0) planeEuler.current.x += finalPitch * authority * dt;
+        planeEuler.current.y += rollInput * dt * Math.max(0.2, 1 - (speedRef.current / maxSpeed));
+        if (speedRef.current > 60 && finalPitch > 0) planeEuler.current.x += finalPitch * authority * dt;
         else planeEuler.current.x = MathUtils.lerp(planeEuler.current.x, 0, dt * 5);
         planeEuler.current.z = MathUtils.lerp(planeEuler.current.z, 0, dt * 10);
     } else {
@@ -141,16 +145,16 @@ function GameLoop({
     planeRotation.current.setFromEuler(planeEuler.current);
     const forward = new Vector3(0, 0, -1).applyQuaternion(planeRotation.current);
     
-    speedRef.current += (throttleRef.current * 150 - airSpeed * airSpeed * 0.00025 + forward.y * -30) * dt;
-    if (isGrounded) speedRef.current -= speedRef.current * 0.2 * dt;
-    speedRef.current = Math.max(0, Math.min(speedRef.current, MAX_SPEED));
+    speedRef.current += (throttleRef.current * 160 - speedRef.current * speedRef.current * 0.00025 + forward.y * -35) * dt;
+    if (isGrounded) speedRef.current -= speedRef.current * 0.25 * dt;
+    speedRef.current = Math.max(0, Math.min(speedRef.current, maxSpeed));
 
     const move = forward.clone().multiplyScalar(speedRef.current * dt);
-    if (!isGrounded && airSpeed < STALL_SPEED) move.y -= 15 * dt;
+    if (!isGrounded && speedRef.current < STALL_SPEED) move.y -= 20 * dt;
     planePosition.current.add(move);
 
     if (planePosition.current.y < 0) {
-       if (move.y < -3 || Math.abs(planeEuler.current.z) > 0.6) onGameOver('CRASH');
+       if (move.y < -3.5 || Math.abs(planeEuler.current.z) > 0.7) onGameOver('CRASH');
        else { planePosition.current.y = 0; planeEuler.current.x = 0; planeEuler.current.z = 0; }
     }
 
@@ -170,76 +174,84 @@ function GameLoop({
         }
     }
 
-    const camOffset = cameraMode === 'FIRST' ? new Vector3(0, 0.6, -0.5) : new Vector3(0, 8, 18);
+    const camOffset = cameraMode === 'FIRST' ? new Vector3(0, 0.6, -0.5) : new Vector3(0, 7, 16);
     const camTarget = planePosition.current.clone().add(camOffset.applyQuaternion(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), planeEuler.current.y)));
-    camera.position.lerp(camTarget, cameraMode === 'FIRST' ? 0.5 : 0.1);
+    camera.position.lerp(camTarget, cameraMode === 'FIRST' ? 0.6 : 0.1);
     camera.lookAt(planePosition.current.clone().add(forward.multiplyScalar(30)));
 
-    onUpdate({ speed: airSpeed, altitude: planePosition.current.y, fuel: 100, heading: MathUtils.radToDeg(planeEuler.current.y), pitch: MathUtils.radToDeg(planeEuler.current.x), roll: MathUtils.radToDeg(planeEuler.current.z), isGrounded });
+    onUpdate({ speed: speedRef.current, altitude: planePosition.current.y, fuel: 100, heading: MathUtils.radToDeg(planeEuler.current.y), pitch: MathUtils.radToDeg(planeEuler.current.x), roll: MathUtils.radToDeg(planeEuler.current.z), isGrounded });
   });
 
   return (
     <>
         <PlaneModel ref={planeRef} playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={planePosition.current} showNameTag={true} />
         {Object.values(networkPlayers).map((p: any) => <NetworkPlane key={p.id} data={p} />)}
-        <World mapObjects={mapObjects} isEditorMode={false} onPlaceObject={handlePlaceObject} onRemoveObject={handleRemoveObject} />
+        <World mapObjects={INITIAL_MAP_DATA} isEditorMode={false} onPlaceObject={()=>{}} onRemoveObject={()=>{}} />
     </>
   );
 }
 
 export default function App() {
   const [profile, setProfile] = useState<PlayerProfile>(loadProfile());
-  const [screen, setScreen] = useState<'LOADING'|'MENU'|'GAME'|'GARAGE'|'PROFILE'|'SETTINGS'>('LOADING');
-  const [gameState, setGameState] = useState<GameState>({ isPlaying: false, isPaused: false, isGameOver: false, gameOverReason: null });
+  const [screen, setScreen] = useState<'LOADING'|'MENU'|'GAME'|'GARAGE'|'PROFILE'|'SETTINGS'|'ROOMS'>('LOADING');
+  const [gameState, setGameState] = useState<GameState>({ isPlaying: false, isPaused: false, isGameOver: false, gameOverReason: null, currentRoom: 'GLOBAL' });
   const [flightData, setFlightData] = useState<FlightData>({ speed: 0, altitude: 0, fuel: 100, heading: 0, pitch: 0, roll: 0, isGrounded: true });
   const [cameraMode, setCameraMode] = useState<'THIRD' | 'FIRST'>('THIRD');
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [playerCount, setPlayerCount] = useState(1);
-  const [networkStatus, setNetworkStatus] = useState("DISCONNECTED");
+  const [networkStatus, setNetworkStatus] = useState("OFFLINE");
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
   const controls = useRef<ControlsState>({ throttleUp: false, throttleDown: false, pitchUp: false, pitchDown: false, rollLeft: false, rollRight: false, yawLeft: false, yawRight: false, joyPitch: 0, joyRoll: 0 });
 
-  useEffect(() => {
-      setTimeout(() => setScreen('MENU'), 2000);
-  }, []);
-
-  useEffect(() => localStorage.setItem('skyace_profile_v6', JSON.stringify(profile)), [profile]);
+  useEffect(() => { setTimeout(() => setScreen('MENU'), 2500); }, []);
+  useEffect(() => localStorage.setItem('skyace_v7_profile', JSON.stringify(profile)), [profile]);
 
   const handleRedeemCode = (code: string) => {
       const c = code.toUpperCase().trim();
       if (c === "GABI" || c === "KAZADA") {
           setProfile(p => ({ ...p, unlockedSkins: Array.from(new Set([...p.unlockedSkins, 'kazada'])), coins: p.coins + 5000 }));
-          alert("GABI SKIN DESBLOQUEADA!");
+          alert("GABI SKIN & 5K COINS UNLOCKED!");
       } else if (c === "PEDRO" || c === "SKYKING") {
           setProfile(p => ({ ...p, unlockedSkins: Array.from(new Set([...p.unlockedSkins, 'pedro'])), coins: p.coins + 5000 }));
-          alert("PEDRO SKIN DESBLOQUEADA!");
-      } else { alert("CÓDIGO INVÁLIDO"); }
+          alert("PEDRO SKIN & 5K COINS UNLOCKED!");
+      } else { alert("INVALID CODE"); }
+  };
+
+  const handleUpgrade = (type: 'turbo'|'handling') => {
+      const currentLevel = profile.upgrades[type];
+      if (currentLevel < 5 && profile.coins >= 500) {
+          setProfile(p => ({ ...p, coins: p.coins - 500, upgrades: { ...p.upgrades, [type]: currentLevel + 1 } }));
+      }
   };
 
   return (
     <div className="w-full h-full relative bg-slate-950 overflow-hidden font-rajdhani">
         {screen === 'LOADING' && <LoadingScreen />}
         <Canvas shadows camera={{ position: [5, 5, 410], fov: 60 }}>
-            <SoundManager throttle={0} speed={0} isPaused={false} isGameOver={false} volume={{music:0.5, sfx:0.5}} customAudio={profile.customAudio} triggerSfx={null} />
+            <SoundManager throttle={0} speed={0} isPaused={false} isGameOver={false} volume={{music:profile.settings.musicVolume, sfx:profile.settings.sfxVolume}} customAudio={profile.customAudio} triggerSfx={null} />
             {screen === 'GAME' ? (
                 <GameLoop 
-                    onUpdate={setFlightData} onGameOver={(r:any)=>setGameState({isPlaying:false, isPaused:false, isGameOver:true, gameOverReason:r})}
-                    controls={controls} gameState={gameState} cameraMode={cameraMode} profile={profile} onAddCoin={()=>setProfile(p=>({...p, coins:p.coins+1}))}
-                    mapObjects={INITIAL_MAP_DATA} isVoiceEnabled={isVoiceActive} setVoiceStatus={()=>{}} setPlayerCount={setPlayerCount} setNetworkStatus={setNetworkStatus}
-                    handlePlaceObject={()=>{}} handleRemoveObject={()=>{}}
+                    onUpdate={setFlightData} onGameOver={(r:any)=>setGameState(prev=>({...prev, isPlaying:false, isGameOver:true, gameOverReason:r}))}
+                    controls={controls} gameState={gameState} cameraMode={cameraMode} profile={profile} setPlayerCount={setPlayerCount} setNetworkStatus={setNetworkStatus}
+                    chatMessages={chatMessages} setChatMessages={setChatMessages}
                 />
             ) : (
-                <group position={[0,0,400]}><ambientLight intensity={1}/><PlaneModel playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={new Vector3(0,0,400)} /></group>
+                <group position={[0,0,400]}>
+                    <ambientLight intensity={1.5}/><pointLight position={[10,10,10]} intensity={2}/>
+                    <PlaneModel playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={new Vector3(0,0,400)} />
+                </group>
             )}
         </Canvas>
 
-        {screen === 'MENU' && <MainMenu onStart={()=>{setGameState({isPlaying:true,isPaused:false,isGameOver:false,gameOverReason:null});setScreen('GAME')}} profile={profile} setScreen={(s:any)=>setScreen(s)} />}
-        {screen === 'GARAGE' && <Garage profile={profile} onBuy={(id:string)=>setProfile(p=>({...p, coins:p.coins-500, unlockedSkins:[...p.unlockedSkins, id]})) } onEquip={(id:string)=>setProfile(p=>({...p, equippedSkin:id}))} onClose={()=>setScreen('MENU')} />}
+        {screen === 'MENU' && <MainMenu onStart={()=>setScreen('ROOMS')} profile={profile} setScreen={(s:any)=>setScreen(s)} />}
+        {screen === 'ROOMS' && <RoomSelection onJoin={(code:string)=>{setGameState(p=>({...p, isPlaying:true, currentRoom:code})); setScreen('GAME');}} onBack={()=>setScreen('MENU')} />}
+        {screen === 'GARAGE' && <Garage profile={profile} onEquip={(id)=>setProfile(p=>({...p, equippedSkin:id}))} onBuy={(id)=>setProfile(p=>({...p, coins:p.coins-SKINS.find(s=>s.id===id)!.price, unlockedSkins:[...p.unlockedSkins, id]}))} onUpgrade={handleUpgrade} onClose={()=>setScreen('MENU')} />}
         {screen === 'PROFILE' && <ProfileScreen profile={profile} onRedeemCode={handleRedeemCode} onClose={()=>setScreen('MENU')} />}
-        
+        {screen === 'SETTINGS' && <SettingsScreen profile={profile} updateSettings={(k:any,v:any)=>setProfile(p=>({...p,settings:{...p.settings,[k]:v}}))} onClose={()=>setScreen('MENU')} />}
+
         {screen === 'GAME' && (
             <HUD 
                 flightData={flightData} gameState={gameState} onReset={()=>setScreen('MENU')} toggleCamera={()=>setCameraMode(m=>m==='THIRD'?'FIRST':'THIRD')} cameraMode={cameraMode} onPause={()=>setGameState(g=>({...g,isPaused:!g.isPaused}))}
-                isVoiceActive={isVoiceActive} toggleVoice={()=>setIsVoiceActive(!isVoiceActive)} voiceStatus="ACTIVE" playerCount={playerCount} networkStatus={networkStatus}
+                playerCount={playerCount} networkStatus={networkStatus} chatMessages={chatMessages}
             />
         )}
         {screen === 'GAME' && !gameState.isGameOver && <MobileControls controls={controls} />}

@@ -1,185 +1,169 @@
 
 import React, { useState } from 'react';
-import { PlayerProfile, SKINS } from '../types';
-import { Play, Settings, ShoppingCart, User, X, ChevronRight, Coins, Lock, Check, Maximize, Upload, RefreshCw } from 'lucide-react';
+import { SKINS, PlayerProfile } from '../types';
+import { Play, ShoppingCart, User, Settings, X, ChevronLeft, Lock, Check, Coins, Zap, Shield, Globe, LockKeyhole } from 'lucide-react';
 
-const Panel = ({ children, className = "" }: { children?: React.ReactNode, className?: string }) => (
-  <div 
-    className={`bg-slate-900/60 backdrop-blur-md border border-white/10 relative overflow-hidden ${className}`}
-  >
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50"></div>
-    {children}
-  </div>
+const GlassPanel = ({ children, className = "" }: any) => (
+    <div className={`bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden relative ${className}`}>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-40"></div>
+        {children}
+    </div>
 );
 
-type ButtonVariant = 'primary' | 'secondary' | 'disabled';
-
-interface ButtonProps {
-    onClick?: () => void;
-    children?: React.ReactNode;
-    variant?: ButtonVariant;
-    className?: string;
-    disabled?: boolean;
-}
-
-const Button = ({ onClick, children, variant = 'primary', className = "", disabled = false }: ButtonProps) => {
-    const base = "px-6 py-4 font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-3 skew-x-[-10deg]";
-    
-    // BUILD FIX: Direct logic instead of object lookup to prevent TS7053
-    let variantClass = "bg-amber-500 text-black hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)]"; // Default Primary
-
-    if (disabled) {
-        variantClass = "bg-white/5 text-white/30 cursor-not-allowed";
-    } else if (variant === 'secondary') {
-        variantClass = "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/30";
-    }
-
-    return (
-        <button 
-            onClick={disabled ? undefined : onClick} 
-            className={`${base} ${variantClass} ${className}`}
-            disabled={disabled}
-        >
-            <span className="skew-x-[10deg] flex items-center gap-2">{children}</span>
-        </button>
-    );
-};
-
-export const LoadingScreen = () => {
-    return (
-        <div className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center font-rajdhani select-none">
-            <div className="relative">
-                <div className="text-8xl font-black italic tracking-tighter text-white mix-blend-difference z-10">SKY ACE</div>
-                <div className="absolute top-1 left-1 text-8xl font-black italic tracking-tighter text-amber-600 opacity-50 blur-sm">SKY ACE</div>
-            </div>
-            <div className="mt-8 flex gap-2">
-                <div className="w-2 h-2 bg-amber-500 animate-bounce" style={{ animationDelay: '0s' }}></div>
-                <div className="w-2 h-2 bg-amber-500 animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-amber-500 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            </div>
-            <div className="mt-4 text-xs text-slate-500 tracking-[0.5em]">INITIALIZING SYSTEMS</div>
+export const LoadingScreen = () => (
+    <div className="absolute inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center font-rajdhani p-6 text-center">
+        <div className="text-6xl md:text-8xl font-black italic tracking-tighter text-white animate-pulse">SKY ACE</div>
+        <div className="mt-8 md:mt-12 w-48 md:w-64 h-1 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full bg-amber-500 animate-[loading_2s_ease-in-out_infinite]"></div>
         </div>
-    );
-};
+        <div className="mt-4 text-[8px] md:text-[10px] text-slate-500 tracking-[0.5em] md:tracking-[0.8em] uppercase">Initializing Flight Deck</div>
+        <style>{`@keyframes loading { 0% { width: 0%; transform: translateX(-100%); } 100% { width: 100%; transform: translateX(100%); } }`}</style>
+    </div>
+);
 
-export const MainMenu = ({ onStart, profile, setScreen }: { onStart: () => void, profile: PlayerProfile, setScreen: (s: string) => void }) => {
-    return (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none p-6 font-rajdhani">
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/20 to-slate-950 pointer-events-none" />
-            
-            {/* Header */}
-            <div className="absolute top-0 left-0 w-full p-8 flex justify-between pointer-events-auto">
-                 <div className="text-left">
-                     <div className="text-xs text-amber-500 tracking-[0.2em] font-bold">PILOT</div>
-                     <div className="text-2xl font-bold text-white">{profile.name}</div>
-                 </div>
-                 <div className="flex items-center gap-2 bg-black/40 px-4 py-2 border border-white/10 rounded-full">
-                     <Coins className="text-amber-500" size={16} />
-                     <span className="text-white font-mono font-bold">{profile.coins.toLocaleString()}</span>
-                 </div>
+export const MainMenu = ({ onStart, profile, setScreen }: any) => (
+    <div className="absolute inset-0 z-50 flex flex-col items-center md:items-start justify-center p-6 md:p-12 bg-gradient-to-b md:bg-gradient-to-r from-slate-950 via-slate-950/40 to-transparent font-rajdhani pointer-events-none">
+        <div className="pointer-events-auto flex flex-col gap-4 md:gap-6 w-full max-w-xs md:max-w-md text-center md:text-left">
+            <div className="mb-6 md:mb-12">
+                <h1 className="text-7xl md:text-9xl font-black italic text-white tracking-tighter leading-[0.8]">SKY<br/><span className="text-amber-500">ACE</span></h1>
+                <p className="text-slate-500 tracking-[0.3em] md:tracking-[0.4em] text-[10px] md:text-xs mt-3 md:mt-4 uppercase font-bold">Next-Gen Flight Simulator</p>
             </div>
 
-            <div className="pointer-events-auto flex flex-col items-center gap-8 z-10 w-full max-w-md">
-                <div className="text-center mb-8">
-                     <h1 className="text-8xl font-black italic text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 drop-shadow-2xl tracking-tighter leading-none">
-                        SKY<br/>ACE
-                     </h1>
-                </div>
+            <button onClick={onStart} className="group relative px-6 py-4 md:px-8 md:py-6 bg-white text-black font-black text-xl md:text-2xl skew-x-[-15deg] transition-all hover:bg-amber-500 hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] active:scale-95">
+                <div className="skew-x-[15deg] flex items-center justify-center md:justify-start gap-4"><Play fill="black" size={24} /> START MISSION</div>
+            </button>
 
-                <Button onClick={onStart} className="w-full text-xl py-6">
-                    <Play size={24} fill="currentColor" /> LAUNCH
-                </Button>
+            <div className="grid grid-cols-2 gap-3 md:gap-4 mt-2">
+                <button onClick={()=>setScreen('GARAGE')} className="p-3 md:p-4 bg-white/5 border border-white/10 text-white font-bold text-sm md:text-base skew-x-[-15deg] hover:bg-white/10 transition-all active:scale-95">
+                    <div className="skew-x-[15deg] flex items-center justify-center gap-2"><ShoppingCart size={16}/> HANGAR</div>
+                </button>
+                <button onClick={()=>setScreen('PROFILE')} className="p-3 md:p-4 bg-white/5 border border-white/10 text-white font-bold text-sm md:text-base skew-x-[-15deg] hover:bg-white/10 transition-all active:scale-95">
+                    <div className="skew-x-[15deg] flex items-center justify-center gap-2"><User size={16}/> PILOT</div>
+                </button>
+            </div>
+
+            <button onClick={()=>setScreen('SETTINGS')} className="p-3 md:p-4 bg-white/5 border border-white/10 text-white font-bold text-sm md:text-base skew-x-[-15deg] hover:bg-white/10 transition-all active:scale-95">
+                <div className="skew-x-[15deg] flex items-center justify-center gap-2"><Settings size={16}/> SETTINGS</div>
+            </button>
+        </div>
+        
+        <div className="absolute top-6 right-6 md:top-12 md:right-12 pointer-events-auto flex items-center gap-3 md:gap-4 scale-90 md:scale-100">
+            <div className="text-right">
+                <div className="text-[8px] md:text-[10px] text-amber-500 font-bold tracking-widest uppercase">Balance</div>
+                <div className="text-xl md:text-2xl font-black text-white">{profile.coins.toLocaleString()} <span className="text-[10px] opacity-50">CR</span></div>
+            </div>
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center">
+                <Coins className="text-amber-500" size={20} />
+            </div>
+        </div>
+    </div>
+);
+
+export const RoomSelection = ({ onJoin, onBack }: any) => {
+    const [code, setCode] = useState("");
+    return (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
+            <GlassPanel className="w-full max-w-xl p-6 md:p-12">
+                <h2 className="text-3xl md:text-5xl font-black italic text-white mb-1 md:mb-2">LOBBY SELECT</h2>
+                <p className="text-slate-500 mb-8 md:mb-12 tracking-widest uppercase text-[10px] md:text-xs">Choose your operational theatre</p>
                 
-                <div className="grid grid-cols-2 gap-4 w-full">
-                    <Button variant="secondary" onClick={() => setScreen('GARAGE')}>
-                        <ShoppingCart size={18} /> HANGAR
-                    </Button>
-                    <Button variant="secondary" onClick={() => setScreen('PROFILE')}>
-                        <User size={18} /> PROFILE
-                    </Button>
+                <div className="grid grid-cols-1 gap-4 md:gap-6">
+                    <button onClick={()=>onJoin('GLOBAL')} className="flex items-center justify-between p-4 md:p-6 bg-amber-500 text-black font-black text-lg md:text-xl skew-x-[-10deg] hover:shadow-2xl transition-all active:scale-95">
+                        <div className="skew-x-[10deg] flex items-center gap-3 md:gap-4"><Globe /> GLOBAL THEATRE</div>
+                        <span className="skew-x-[10deg] text-[10px] opacity-70">OPEN</span>
+                    </button>
+
+                    <div className="relative py-2">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
+                        <div className="relative flex justify-center text-[10px] uppercase text-slate-500 tracking-widest"><span className="bg-slate-900 px-3 md:px-4">Private Sector</span></div>
+                    </div>
+
+                    <div className="flex gap-2 md:gap-3">
+                        <input 
+                            value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
+                            className="flex-1 bg-white/5 border border-white/10 p-3 md:p-5 text-white font-bold tracking-widest outline-none focus:border-amber-500 transition-all skew-x-[-10deg] text-sm md:text-base" 
+                            placeholder="ROOM CODE" 
+                        />
+                        <button onClick={()=>code && onJoin(code)} className="px-5 md:px-8 bg-white text-black font-black skew-x-[-10deg] hover:bg-amber-400 transition-all disabled:opacity-50 active:scale-95" disabled={!code}>
+                            <div className="skew-x-[10deg]"><LockKeyhole size={20}/></div>
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex gap-4 w-full">
-                    <Button variant="secondary" onClick={() => setScreen('SETTINGS')} className="flex-1">
-                        <Settings size={18} /> SETTINGS
-                    </Button>
-                     <Button variant="secondary" onClick={() => document.documentElement.requestFullscreen()} className="flex-none px-4">
-                        <Maximize size={18} />
-                    </Button>
-                </div>
-            </div>
+                <button onClick={onBack} className="mt-8 md:mt-12 text-slate-500 hover:text-white flex items-center gap-2 font-bold uppercase tracking-widest text-[10px] md:text-xs">
+                    <ChevronLeft size={14} /> Abort Selection
+                </button>
+            </GlassPanel>
         </div>
     );
 };
 
-export const Garage = ({ profile, onEquip, onBuy, onClose }: { profile: PlayerProfile, onEquip: (id: string) => void, onBuy: (id: string) => void, onClose: () => void }) => {
-    const [selectedId, setSelectedId] = useState(profile.equippedSkin);
-    const selectedSkin = SKINS.find(s => s.id === selectedId) || SKINS[0];
-    const isUnlocked = profile.unlockedSkins.includes(selectedId);
-    
-    return (
-        <div className="absolute inset-0 z-50 flex font-rajdhani">
-            {/* Left Panel */}
-            <div className="w-80 h-full bg-slate-950/90 border-r border-white/10 pointer-events-auto flex flex-col backdrop-blur-xl">
-                 <div className="p-6 border-b border-white/10 flex items-center gap-4">
-                     <button onClick={onClose} className="text-white hover:text-amber-500 transition-colors"><ChevronRight className="rotate-180" size={24} /></button>
-                     <h2 className="text-2xl font-black tracking-widest text-white">HANGAR</h2>
-                 </div>
+export const Garage = ({ profile, onEquip, onBuy, onUpgrade, onClose }: any) => {
+    const [selId, setSelId] = useState(profile.equippedSkin);
+    const skin = SKINS.find(s=>s.id===selId) || SKINS[0];
+    const owned = profile.unlockedSkins.includes(selId);
 
-                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
-                     {SKINS.map(skin => {
-                         const owned = profile.unlockedSkins.includes(skin.id);
-                         const active = selectedId === skin.id;
-                         return (
-                             <button
-                                key={skin.id}
-                                onClick={() => setSelectedId(skin.id)}
-                                className={`w-full p-4 flex items-center justify-between border-l-2 transition-all ${active ? 'bg-white/10 border-amber-500' : 'bg-transparent border-transparent hover:bg-white/5'}`}
-                             >
-                                 <div className="text-left">
-                                     <div className={`font-bold ${active ? 'text-white' : 'text-slate-400'}`}>{skin.name}</div>
-                                     <div className="text-[10px] text-slate-500">{skin.isSpecial ? 'PROTOTYPE' : 'STANDARD'}</div>
-                                 </div>
-                                 {owned ? <Check size={14} className="text-green-500" /> : <Lock size={14} className="text-slate-600" />}
-                             </button>
-                         )
-                     })}
-                 </div>
+    return (
+        <div className="absolute inset-0 z-50 flex flex-col md:flex-row font-rajdhani">
+            <div className="w-full md:w-80 lg:w-96 bg-slate-950/90 border-b md:border-b-0 md:border-r border-white/10 p-4 md:p-8 flex flex-col backdrop-blur-2xl max-h-[40vh] md:max-h-none">
+                <button onClick={onClose} className="flex items-center gap-2 text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] md:text-xs mb-4 md:mb-12"><ChevronLeft size={14}/> Back</button>
+                <h2 className="text-2xl md:text-4xl font-black italic text-white mb-4 md:mb-8">HANGAR</h2>
+                
+                <div className="flex-1 space-y-2 md:space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+                    {SKINS.map(s => (
+                        <button key={s.id} onClick={()=>setSelId(s.id)} className={`w-full p-3 md:p-4 flex items-center justify-between border-l-2 md:border-l-4 transition-all ${selId===s.id?'bg-white/10 border-amber-500':'bg-transparent border-transparent hover:bg-white/5'}`}>
+                            <div className="text-left">
+                                <div className="font-bold text-white text-sm md:text-base">{s.name}</div>
+                                <div className="text-[9px] md:text-[10px] text-slate-500 uppercase">{s.price===0?'Standard':'Prototype'}</div>
+                            </div>
+                            {profile.unlockedSkins.includes(s.id)?<Check size={12} className="text-green-500"/>:<Lock size={12} className="text-slate-600"/>}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="mt-4 md:mt-8 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-4">
+                    <div className="p-3 md:p-4 bg-white/5 border border-white/5 rounded">
+                        <div className="flex justify-between items-center mb-1 md:mb-2">
+                            <span className="text-[8px] md:text-[10px] text-amber-500 font-bold uppercase"><Zap size={10} className="inline mr-1"/> Turbo</span>
+                            <span className="text-[9px] md:text-xs text-white">L{profile.upgrades.turbo}</span>
+                        </div>
+                        <div className="flex gap-1 h-1 bg-white/10 mb-2">
+                            {[1,2,3,4,5].map(i=><div key={i} className={`flex-1 ${profile.upgrades.turbo>=i?'bg-amber-500':'bg-transparent'}`}/>)}
+                        </div>
+                        <button onClick={()=>onUpgrade('turbo')} disabled={profile.upgrades.turbo>=5 || profile.coins<500} className="w-full py-1 md:py-2 bg-amber-500/20 text-amber-500 font-bold text-[8px] md:text-[10px] uppercase transition-all disabled:opacity-30">Upgrade</button>
+                    </div>
+
+                    <div className="p-3 md:p-4 bg-white/5 border border-white/5 rounded">
+                        <div className="flex justify-between items-center mb-1 md:mb-2">
+                            <span className="text-[8px] md:text-[10px] text-cyan-400 font-bold uppercase"><Shield size={10} className="inline mr-1"/> Aero</span>
+                            <span className="text-[9px] md:text-xs text-white">L{profile.upgrades.handling}</span>
+                        </div>
+                        <div className="flex gap-1 h-1 bg-white/10 mb-2">
+                            {[1,2,3,4,5].map(i=><div key={i} className={`flex-1 ${profile.upgrades.handling>=i?'bg-cyan-400':'bg-transparent'}`}/>)}
+                        </div>
+                        <button onClick={()=>onUpgrade('handling')} disabled={profile.upgrades.handling>=5 || profile.coins<500} className="w-full py-1 md:py-2 bg-cyan-400/20 text-cyan-400 font-bold text-[8px] md:text-[10px] uppercase transition-all disabled:opacity-30">Upgrade</button>
+                    </div>
+                </div>
             </div>
 
-            {/* Bottom Panel */}
-            <div className="absolute bottom-8 left-96 right-8 pointer-events-auto">
-                 <Panel className="p-6 flex items-center justify-between">
-                      <div>
-                          <div className="text-amber-500 text-xs tracking-widest mb-1">SPECIFICATIONS</div>
-                          <div className="text-4xl font-black text-white italic">{selectedSkin.name}</div>
-                          <div className="text-slate-400 text-sm mt-1">
-                             COST: <span className="text-white">{selectedSkin.price === 0 ? 'FREE' : selectedSkin.price}</span>
-                          </div>
-                      </div>
-                      
-                      <div className="w-48">
-                          {isUnlocked ? (
-                              <Button 
-                                variant={profile.equippedSkin === selectedId ? 'disabled' : 'primary'}
-                                onClick={() => onEquip(selectedId)}
-                                disabled={profile.equippedSkin === selectedId}
-                                className="w-full"
-                              >
-                                  {profile.equippedSkin === selectedId ? 'EQUIPPED' : 'DEPLOY'}
-                              </Button>
-                          ) : (
-                              <Button 
-                                variant={profile.coins >= selectedSkin.price ? 'primary' : 'disabled'}
-                                onClick={() => onBuy(selectedId)}
-                                disabled={profile.coins < selectedSkin.price}
-                                className="w-full"
-                              >
-                                  BUY
-                              </Button>
-                          )}
-                      </div>
-                 </Panel>
+            <div className="flex-1 relative pointer-events-none md:pointer-events-auto">
+                <div className="absolute bottom-6 md:bottom-12 right-6 md:right-12 flex flex-col items-center md:items-end gap-4 md:gap-6 pointer-events-auto w-[calc(100%-3rem)] md:w-auto">
+                    <GlassPanel className="p-6 md:p-10 w-full md:w-96">
+                        <div className="text-[10px] text-amber-500 font-bold tracking-widest mb-1 md:mb-2 uppercase">Specifications</div>
+                        <h3 className="text-3xl md:text-5xl font-black italic text-white mb-1">{skin.name}</h3>
+                        <p className="text-slate-500 text-xs md:text-sm mb-6 md:mb-8">Combat-ready aerospace technology.</p>
+                        
+                        {owned ? (
+                            <button onClick={()=>onEquip(selId)} disabled={profile.equippedSkin===selId} className="w-full py-4 md:py-5 bg-white text-black font-black text-lg md:text-xl skew-x-[-15deg] hover:bg-amber-500 transition-all disabled:opacity-30 active:scale-95">
+                                <span className="skew-x-[15deg] block">{profile.equippedSkin===selId?'ACTIVE':'DEPLOY'}</span>
+                            </button>
+                        ) : (
+                            <button onClick={()=>onBuy(selId)} disabled={profile.coins<skin.price} className="w-full py-4 md:py-5 bg-amber-500 text-black font-black text-lg md:text-xl skew-x-[-15deg] hover:bg-amber-400 transition-all disabled:opacity-30 active:scale-95">
+                                <span className="skew-x-[15deg] block">BUY {skin.price} CR</span>
+                            </button>
+                        )}
+                    </GlassPanel>
+                </div>
             </div>
         </div>
     );
@@ -187,141 +171,67 @@ export const Garage = ({ profile, onEquip, onBuy, onClose }: { profile: PlayerPr
 
 export const ProfileScreen = ({ profile, onRedeemCode, onClose }: any) => {
     const [code, setCode] = useState("");
-    
-    const handleSubmit = () => {
-        if (code) {
-            onRedeemCode(code);
-            setCode("");
-        }
-    };
-
     return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur font-rajdhani">
-        <Panel className="w-full max-w-2xl p-8">
-            <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-                <h2 className="text-3xl font-black italic text-white">PILOT RECORD</h2>
-                <button onClick={onClose}><X className="text-slate-500 hover:text-white" size={24} /></button>
-            </div>
-            {/* Simple stats layout */}
-            <div className="grid grid-cols-2 gap-8 mb-8">
-                <div className="bg-white/5 p-4 rounded border border-white/5">
-                    <div className="text-slate-500 text-xs tracking-widest">FLIGHTS</div>
-                    <div className="text-3xl text-white font-bold">{profile.stats.flights}</div>
-                </div>
-                 <div className="bg-white/5 p-4 rounded border border-white/5">
-                    <div className="text-slate-500 text-xs tracking-widest">RANK</div>
-                    <div className="text-3xl text-amber-500 font-bold">ROOKIE</div>
-                </div>
-            </div>
-             <div className="flex gap-2">
-                    <input 
-                        value={code}
-                        onChange={(e) => setCode(e.target.value)}
-                        className="bg-black border border-white/20 text-white p-3 w-full font-mono uppercase focus:border-amber-500 outline-none" 
-                        placeholder="REDEEM CODE" 
-                    />
-                    <Button onClick={handleSubmit}>SUBMIT</Button>
-            </div>
-        </Panel>
-    </div>
-    );
-};
-
-export const SettingsScreen = ({ profile, updateSettings, updateCustomAudio, onClose }: any) => {
-    const [devMode, setDevMode] = useState(false);
-    const [accessKey, setAccessKey] = useState("");
-
-    const checkAccess = (val: string) => {
-        setAccessKey(val);
-        if (val === "DEV_MASTER") {
-            setDevMode(true);
-        }
-    };
-
-    return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur font-rajdhani">
-        <Panel className="w-full max-w-2xl p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">
-            <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black italic text-white">SYSTEM CONFIG</h2>
-                <button onClick={onClose}><X className="text-slate-500 hover:text-white" size={24} /></button>
-            </div>
-            
-            <div className="space-y-6">
-                <div>
-                    <div className="flex justify-between text-slate-300 text-sm mb-2">MUSIC LEVEL</div>
-                    <input type="range" max="1" step="0.1" value={profile.settings.musicVolume} onChange={(e) => updateSettings('musicVolume', parseFloat(e.target.value))} className="w-full accent-amber-500 h-1 bg-white/10" />
-                </div>
-                 <div>
-                    <div className="flex justify-between text-slate-300 text-sm mb-2">SFX LEVEL</div>
-                    <input type="range" max="1" step="0.1" value={profile.settings.sfxVolume} onChange={(e) => updateSettings('sfxVolume', parseFloat(e.target.value))} className="w-full accent-amber-500 h-1 bg-white/10" />
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-2xl p-4 font-rajdhani">
+            <GlassPanel className="w-full max-w-2xl p-6 md:p-16">
+                <div className="flex justify-between items-start mb-8 md:mb-12">
+                    <div>
+                        <h2 className="text-4xl md:text-6xl font-black italic text-white leading-tight">PILOT<br/>DOSSIER</h2>
+                        <div className="h-1 w-16 md:w-24 bg-amber-500 mt-2 md:mt-4"></div>
+                    </div>
+                    <button onClick={onClose} className="p-2"><X className="text-slate-500 hover:text-white" size={28} /></button>
                 </div>
                 
-                <div className="border-t border-white/10 pt-6 mt-6">
-                     <div className="text-xs text-slate-500 mb-2">ACCESS KEY</div>
-                     <input 
-                        type="text" 
-                        value={accessKey}
-                        onChange={(e) => checkAccess(e.target.value)}
-                        className="bg-black/50 border border-white/10 text-white text-xs p-2 w-full font-mono mb-4"
-                        placeholder="ENTER DEVELOPER KEY"
-                     />
-                     
-                     {devMode && (
-                        <div className="bg-amber-900/20 border border-amber-500/30 p-4 rounded space-y-4">
-                            <h3 className="text-amber-500 font-bold flex items-center gap-2"><Upload size={16}/> CREATOR AUDIO PANEL (PERSISTENT)</h3>
-                            <div className="text-[10px] text-slate-400 mb-2">NOTE: Files are saved permanently to this browser.</div>
-                            
-                            {[
-                                {k: 'engine', label: 'ENGINE LOOP (PITCH SHIFTS)'},
-                                {k: 'idle', label: 'IDLE ENGINE LOOP'},
-                                {k: 'music', label: 'BG MUSIC'},
-                                {k: 'click', label: 'UI CLICK SFX'},
-                                {k: 'coin', label: 'COIN PICKUP SFX'},
-                                {k: 'buy', label: 'SHOP BUY SFX'},
-                                {k: 'win', label: 'WIN/TROPHY SFX'},
-                            ].map((item) => (
-                                <div key={item.k} className="border-b border-white/5 pb-2">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <div className="text-[10px] text-amber-200">{item.label}</div>
-                                        {profile.customAudio[item.k] && (
-                                            <button 
-                                                onClick={() => updateCustomAudio(item.k, '')}
-                                                className="flex items-center gap-1 text-[9px] bg-red-500/20 text-red-300 px-2 rounded hover:bg-red-500 hover:text-white transition-colors"
-                                            >
-                                                <RefreshCw size={8} /> RESET
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <input 
-                                            type="file"
-                                            accept="audio/*"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    updateCustomAudio(item.k, file);
-                                                }
-                                            }}
-                                            className="w-full text-xs text-slate-400
-                                              file:mr-4 file:py-2 file:px-4
-                                              file:rounded-full file:border-0
-                                              file:text-xs file:font-semibold
-                                              file:bg-amber-500 file:text-black
-                                              hover:file:bg-amber-400 cursor-pointer"
-                                        />
-                                        {profile.customAudio[item.k] && (
-                                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                     )}
+                <div className="grid grid-cols-2 gap-4 md:gap-8 mb-8 md:mb-12">
+                    <div className="bg-white/5 p-4 md:p-6 border-l-2 border-amber-500">
+                        <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mb-1">Callsign</div>
+                        <div className="text-xl md:text-3xl text-white font-black truncate">{profile.name}</div>
+                    </div>
+                    <div className="bg-white/5 p-4 md:p-6 border-l-2 border-cyan-500">
+                        <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mb-1">Missions</div>
+                        <div className="text-xl md:text-3xl text-white font-black tabular-nums">{profile.stats.flights}</div>
+                    </div>
                 </div>
 
-                <div className="pt-4 text-center text-xs text-slate-600 font-mono">BUILD VERSION 3.2.0 (HOTFIX)</div>
-            </div>
-        </Panel>
-    </div>
+                <div className="flex flex-col gap-3 md:gap-4">
+                    <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Secret Operations Code</div>
+                    <div className="flex flex-col md:flex-row gap-2">
+                        <input value={code} onChange={e=>setCode(e.target.value)} className="flex-1 bg-black border border-white/10 p-3 md:p-5 text-white font-black tracking-[0.2em] md:tracking-[0.5em] outline-none focus:border-amber-500 text-sm md:text-base uppercase" placeholder="ENTER CODE" />
+                        <button onClick={()=>{onRedeemCode(code); setCode("")}} className="py-3 md:py-0 px-10 bg-white text-black font-black hover:bg-amber-500 transition-all active:scale-95">SUBMIT</button>
+                    </div>
+                </div>
+            </GlassPanel>
+        </div>
     );
 };
+
+export const SettingsScreen = ({ profile, updateSettings, onClose }: any) => (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/95 backdrop-blur-2xl p-4 font-rajdhani">
+        <GlassPanel className="w-full max-w-xl p-6 md:p-12">
+            <div className="flex justify-between items-center mb-8 md:mb-12">
+                <h2 className="text-3xl md:text-5xl font-black italic text-white">SYSTEMS</h2>
+                <button onClick={onClose} className="p-2"><X className="text-slate-500 hover:text-white" size={28} /></button>
+            </div>
+            
+            <div className="space-y-6 md:space-y-8">
+                <div className="space-y-3 md:space-y-4">
+                    <div className="flex justify-between text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest"><span>Music Volume</span><span>{Math.round(profile.settings.musicVolume*100)}%</span></div>
+                    <input type="range" max="1" step="0.05" value={profile.settings.musicVolume} onChange={e=>updateSettings('musicVolume', parseFloat(e.target.value))} className="w-full accent-amber-500 h-1 bg-white/10 rounded-full cursor-pointer" />
+                </div>
+                <div className="space-y-3 md:space-y-4">
+                    <div className="flex justify-between text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest"><span>SFX Volume</span><span>{Math.round(profile.settings.sfxVolume*100)}%</span></div>
+                    <input type="range" max="1" step="0.05" value={profile.settings.sfxVolume} onChange={e=>updateSettings('sfxVolume', parseFloat(e.target.value))} className="w-full accent-amber-500 h-1 bg-white/10 rounded-full cursor-pointer" />
+                </div>
+                
+                <div className="flex items-center justify-between p-4 md:p-6 bg-white/5 border border-white/5">
+                    <div className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Inverted Pitch</div>
+                    <button onClick={()=>updateSettings('invertedLook', !profile.settings.invertedLook)} className={`w-12 md:w-14 h-6 md:h-7 rounded-full transition-all relative ${profile.settings.invertedLook?'bg-amber-500':'bg-white/10'}`}>
+                        <div className={`absolute top-1 w-4 md:w-5 h-4 md:h-5 rounded-full bg-white transition-all ${profile.settings.invertedLook?'left-7 md:left-8':'left-1'}`}></div>
+                    </button>
+                </div>
+            </div>
+
+            <div className="mt-8 md:mt-12 text-center text-[9px] text-slate-700 font-mono tracking-widest uppercase">SKY-ACE ENGINE v4.2.0 STABLE</div>
+        </GlassPanel>
+    </div>
+);
