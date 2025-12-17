@@ -23,10 +23,6 @@ const INITIAL_MAP_DATA: MapObject[] = [
     { id: 'gate-2', type: 'BUILDING_TALL', position: [150, 0, -3000], scale: [50, 300, 50] },
 ];
 
-// --- STORAGE HELPERS ---
-const DB_NAME = 'SkyAceAudioDB';
-const STORE_NAME = 'audio_files';
-
 const loadProfile = (): PlayerProfile => {
     try {
         const saved = localStorage.getItem('skyace_profile_v6'); 
@@ -43,15 +39,6 @@ const loadProfile = (): PlayerProfile => {
     };
 };
 
-const VoiceChatController = ({ socket, isEnabled, onStatusChange }: any) => {
-    // Basic stub for voice
-    useEffect(() => {
-        if (isEnabled) onStatusChange("ON AIR");
-        else onStatusChange("OFFLINE");
-    }, [isEnabled]);
-    return null;
-};
-
 const NetworkPlane: React.FC<{ data: NetworkPlayerData }> = ({ data }) => {
     const groupRef = useRef<Group>(null);
     const skin = SKINS.find(s => s.id === data.skin) || SKINS[0];
@@ -65,15 +52,14 @@ const NetworkPlane: React.FC<{ data: NetworkPlayerData }> = ({ data }) => {
 };
 
 function GameLoop({ 
-  onUpdate, onGameOver, controls, gameState, cameraMode, profile, onAddCoin, playSound, mapObjects, isEditorMode, isVoiceEnabled, setVoiceStatus, setPlayerCount, setNetworkStatus
+  onUpdate, onGameOver, controls, gameState, cameraMode, profile, onAddCoin, mapObjects, isVoiceEnabled, setVoiceStatus, setPlayerCount, setNetworkStatus, handlePlaceObject, handleRemoveObject
 }: any) {
   const planeRef = useRef<Group>(null);
-  const planePosition = useRef(new Vector3((Math.random() - 0.5) * 10, 0, 400)); 
+  const planePosition = useRef(new Vector3((Math.random() - 0.5) * 5, 0, 400)); 
   const planeRotation = useRef(new Quaternion());
   const planeEuler = useRef(new Euler(0, 0, 0)); 
   const speedRef = useRef(0);
   const throttleRef = useRef(0); 
-  const fuelRef = useRef(MAX_FUEL);
   const { camera } = useThree();
 
   const socketRef = useRef<Socket | null>(null);
@@ -81,53 +67,50 @@ function GameLoop({
   const updateTimer = useRef(0);
 
   useEffect(() => {
-    if (!isEditorMode) {
-        // FORCE WEBSOCKET FOR RENDER STABILITY
-        const socket = io({ transports: ['websocket'], upgrade: false });
-        socketRef.current = socket;
+    const socket = io({ transports: ['websocket'], upgrade: false });
+    socketRef.current = socket;
 
-        socket.on('connect', () => {
-            setNetworkStatus("CONNECTED");
-            socket.emit('join', { name: profile.name, skin: profile.equippedSkin });
+    socket.on('connect', () => {
+        setNetworkStatus("CONNECTED");
+        socket.emit('join', { name: profile.name, skin: profile.equippedSkin });
+    });
+
+    socket.on('disconnect', () => setNetworkStatus("DISCONNECTED"));
+    socket.on('connect_error', () => setNetworkStatus("ERROR"));
+
+    socket.on('currentPlayers', (players: any) => {
+        const others = { ...players };
+        if (socket.id) delete others[socket.id];
+        setNetworkPlayers(others);
+        setPlayerCount(Object.keys(players).length);
+    });
+
+    socket.on('playerJoined', (player: any) => {
+        setNetworkPlayers(prev => {
+            const next = { ...prev, [player.id]: player };
+            setPlayerCount(Object.keys(next).length + 1);
+            return next;
         });
+    });
 
-        socket.on('disconnect', () => setNetworkStatus("DISCONNECTED"));
-        socket.on('connect_error', () => setNetworkStatus("ERROR"));
+    socket.on('playerMoved', ({ id, data }: any) => {
+        setNetworkPlayers(prev => prev[id] ? { ...prev, [id]: { ...prev[id], ...data } } : prev);
+    });
 
-        socket.on('currentPlayers', (players: any) => {
-            const others = { ...players };
-            delete others[socket.id];
-            setNetworkPlayers(others);
-            setPlayerCount(Object.keys(players).length);
+    socket.on('playerLeft', (id: string) => {
+        setNetworkPlayers(prev => {
+            const next = { ...prev };
+            delete next[id];
+            setPlayerCount(Object.keys(next).length + 1);
+            return next;
         });
+    });
 
-        socket.on('playerJoined', (player: any) => {
-            setNetworkPlayers(prev => {
-                const next = { ...prev, [player.id]: player };
-                setPlayerCount(Object.keys(next).length + 1);
-                return next;
-            });
-        });
-
-        socket.on('playerMoved', ({ id, data }: any) => {
-            setNetworkPlayers(prev => prev[id] ? { ...prev, [id]: { ...prev[id], ...data } } : prev);
-        });
-
-        socket.on('playerLeft', (id: string) => {
-            setNetworkPlayers(prev => {
-                const next = { ...prev };
-                delete next[id];
-                setPlayerCount(Object.keys(next).length + 1);
-                return next;
-            });
-        });
-
-        return () => { socket.disconnect(); };
-    }
-  }, [isEditorMode, profile.name]);
+    return () => { socket.disconnect(); };
+  }, [profile.name]);
 
   useFrame((state, delta) => {
-    if (isEditorMode || !gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return;
+    if (!gameState.isPlaying || gameState.isGameOver || gameState.isPaused) return;
 
     const dt = Math.min(delta, 0.1); 
 
@@ -176,7 +159,7 @@ function GameLoop({
         planeRef.current.quaternion.copy(planeRotation.current);
     }
 
-    if (socketRef.current && socketRef.current.connected) {
+    if (socketRef.current?.connected) {
         updateTimer.current += dt;
         if (updateTimer.current > 0.05) {
             socketRef.current.emit('updateMovement', {
@@ -187,7 +170,6 @@ function GameLoop({
         }
     }
 
-    // Camera
     const camOffset = cameraMode === 'FIRST' ? new Vector3(0, 0.6, -0.5) : new Vector3(0, 8, 18);
     const camTarget = planePosition.current.clone().add(camOffset.applyQuaternion(new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), planeEuler.current.y)));
     camera.position.lerp(camTarget, cameraMode === 'FIRST' ? 0.5 : 0.1);
@@ -198,10 +180,9 @@ function GameLoop({
 
   return (
     <>
-        <VoiceChatController socket={socketRef.current} isEnabled={isVoiceEnabled} onStatusChange={setVoiceStatus} />
         <PlaneModel ref={planeRef} playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={planePosition.current} showNameTag={true} />
         {Object.values(networkPlayers).map((p: any) => <NetworkPlane key={p.id} data={p} />)}
-        <World mapObjects={mapObjects} isEditorMode={isEditorMode} />
+        <World mapObjects={mapObjects} isEditorMode={false} onPlaceObject={handlePlaceObject} onRemoveObject={handleRemoveObject} />
     </>
   );
 }
@@ -213,7 +194,6 @@ export default function App() {
   const [flightData, setFlightData] = useState<FlightData>({ speed: 0, altitude: 0, fuel: 100, heading: 0, pitch: 0, roll: 0, isGrounded: true });
   const [cameraMode, setCameraMode] = useState<'THIRD' | 'FIRST'>('THIRD');
   const [isVoiceActive, setIsVoiceActive] = useState(false);
-  const [voiceStatus, setVoiceStatus] = useState("OFFLINE");
   const [playerCount, setPlayerCount] = useState(1);
   const [networkStatus, setNetworkStatus] = useState("DISCONNECTED");
   const controls = useRef<ControlsState>({ throttleUp: false, throttleDown: false, pitchUp: false, pitchDown: false, rollLeft: false, rollRight: false, yawLeft: false, yawRight: false, joyPitch: 0, joyRoll: 0 });
@@ -226,21 +206,13 @@ export default function App() {
 
   const handleRedeemCode = (code: string) => {
       const c = code.toUpperCase().trim();
-      let msg = "CÓDIGO INVÁLIDO";
-      let ok = false;
-
       if (c === "GABI" || c === "KAZADA") {
           setProfile(p => ({ ...p, unlockedSkins: Array.from(new Set([...p.unlockedSkins, 'kazada'])), coins: p.coins + 5000 }));
-          msg = "SKIN GABI DESBLOQUEADA! +5000 COINS"; ok = true;
+          alert("GABI SKIN DESBLOQUEADA!");
       } else if (c === "PEDRO" || c === "SKYKING") {
           setProfile(p => ({ ...p, unlockedSkins: Array.from(new Set([...p.unlockedSkins, 'pedro'])), coins: p.coins + 5000 }));
-          msg = "SKIN PEDRO DESBLOQUEADA! +5000 COINS"; ok = true;
-      } else if (c === "SKYACE") {
-          setProfile(p => ({ ...p, coins: p.coins + 1000 }));
-          msg = "BÔNUS DE 1000 COINS RECEBIDO!"; ok = true;
-      }
-
-      alert(msg);
+          alert("PEDRO SKIN DESBLOQUEADA!");
+      } else { alert("CÓDIGO INVÁLIDO"); }
   };
 
   return (
@@ -252,7 +224,8 @@ export default function App() {
                 <GameLoop 
                     onUpdate={setFlightData} onGameOver={(r:any)=>setGameState({isPlaying:false, isPaused:false, isGameOver:true, gameOverReason:r})}
                     controls={controls} gameState={gameState} cameraMode={cameraMode} profile={profile} onAddCoin={()=>setProfile(p=>({...p, coins:p.coins+1}))}
-                    mapObjects={INITIAL_MAP_DATA} isEditorMode={false} isVoiceEnabled={isVoiceActive} setVoiceStatus={setVoiceStatus} setPlayerCount={setPlayerCount} setNetworkStatus={setNetworkStatus}
+                    mapObjects={INITIAL_MAP_DATA} isVoiceEnabled={isVoiceActive} setVoiceStatus={()=>{}} setPlayerCount={setPlayerCount} setNetworkStatus={setNetworkStatus}
+                    handlePlaceObject={()=>{}} handleRemoveObject={()=>{}}
                 />
             ) : (
                 <group position={[0,0,400]}><ambientLight intensity={1}/><PlaneModel playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={new Vector3(0,0,400)} /></group>
@@ -266,7 +239,7 @@ export default function App() {
         {screen === 'GAME' && (
             <HUD 
                 flightData={flightData} gameState={gameState} onReset={()=>setScreen('MENU')} toggleCamera={()=>setCameraMode(m=>m==='THIRD'?'FIRST':'THIRD')} cameraMode={cameraMode} onPause={()=>setGameState(g=>({...g,isPaused:!g.isPaused}))}
-                isEditorMode={false} toggleEditor={()=>{}} setSelectedType={()=>{}} onExportMap={()=>{}} isVoiceActive={isVoiceActive} toggleVoice={()=>setIsVoiceActive(!isVoiceActive)} voiceStatus={voiceStatus} playerCount={playerCount}
+                isVoiceActive={isVoiceActive} toggleVoice={()=>setIsVoiceActive(!isVoiceActive)} voiceStatus="ACTIVE" playerCount={playerCount} networkStatus={networkStatus}
             />
         )}
         {screen === 'GAME' && !gameState.isGameOver && <MobileControls controls={controls} />}
