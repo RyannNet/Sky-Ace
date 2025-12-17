@@ -1,9 +1,9 @@
 
 import React, { useState, useRef } from 'react';
-import { Sky, Stars, Ring } from '@react-three/drei';
+import { Sky, Stars } from '@react-three/drei';
 import { MapObject, MapObjectType } from '../types';
 import { Vector3 } from 'three';
-import { ThreeEvent } from '@react-three/fiber';
+import { ThreeEvent, useFrame } from '@react-three/fiber';
 
 interface WorldProps {
     mapObjects: MapObject[];
@@ -109,12 +109,6 @@ export const World: React.FC<WorldProps> = ({ mapObjects, isEditorMode, onPlaceO
                          <coneGeometry args={[obj.scale[0]/2, obj.scale[1], 4]} />
                          <meshStandardMaterial color="#d97706" />
                     </mesh>
-                )}
-                {obj.type === 'RING' && (
-                     <mesh position={[0, 20, 0]} rotation={[0,0,0]}>
-                        <torusGeometry args={[10, 1, 16, 100]} />
-                        <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={2} />
-                     </mesh>
                 )}
             </group>
       ))}

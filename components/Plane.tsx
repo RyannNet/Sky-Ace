@@ -5,7 +5,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { Html, Text } from '@react-three/drei';
 import { Skin } from '../types';
 
-// --- Heart Trail System ---
+// --- Heart Trail System (GABI) ---
 const HeartTrail: React.FC<{ parentPosition: Vector3; active: boolean }> = ({ parentPosition, active }) => {
   const [hearts, setHearts] = useState<{ id: number; pos: Vector3; opacity: number; scale: number }[]>([]);
   const lastSpawnTime = useRef(0);

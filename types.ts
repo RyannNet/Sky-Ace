@@ -1,3 +1,4 @@
+
 export interface GameState {
   isPlaying: boolean;
   isPaused: boolean;
@@ -40,12 +41,12 @@ export interface Skin {
 
 export interface CustomAudioMap {
   engine: string;
-  idle: string; // Som parado (opcional, senão usa engine lento)
+  idle: string;
   music: string;
   click: string;
   coin: string;
-  buy: string; // Especial loja
-  win: string; // Troféu/Recompensa
+  buy: string; 
+  win: string;
 }
 
 export interface PlayerProfile {
@@ -65,7 +66,21 @@ export interface PlayerProfile {
     sensitivity: number;
     invertedLook: boolean;
   };
-  customAudio: CustomAudioMap; // Novo campo
+  customAudio: CustomAudioMap;
+}
+
+// --- MULTIPLAYER TYPES ---
+export interface NetworkPlayerData {
+    id: string;
+    name: string;
+    skin: string;
+    x: number;
+    y: number;
+    z: number;
+    qx: number;
+    qy: number;
+    qz: number;
+    qw: number;
 }
 
 // --- MAP EDITOR TYPES ---

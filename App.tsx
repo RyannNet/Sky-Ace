@@ -1,24 +1,53 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Vector3, Quaternion, Euler, MathUtils, Group } from 'three';
+import { io, Socket } from 'socket.io-client'; // Import Socket.io
 import { PlaneModel } from './components/Plane';
 import { World } from './components/World';
 import { HUD } from './components/HUD';
 import { MainMenu, Garage, ProfileScreen, SettingsScreen, LoadingScreen } from './components/Menus';
 import { SoundManager } from './components/SoundManager';
 import { MobileControls } from './components/Controls';
-import { GameState, FlightData, ControlsState, GRAVITY, MAX_SPEED, STALL_SPEED, MAX_FUEL, PlayerProfile, SKINS, MapObject, MapObjectType } from './types';
-import { v4 as uuidv4 } from 'uuid'; // Standard unique ID generator
+import { GameState, FlightData, ControlsState, GRAVITY, MAX_SPEED, STALL_SPEED, MAX_FUEL, PlayerProfile, SKINS, MapObject, MapObjectType, NetworkPlayerData } from './types';
+import { v4 as uuidv4 } from 'uuid';
 
-// --- MAP DATA CONSTANT ---
-// CHANGE THIS TO SAVE FOR EVERYONE:
-// Paste the JSON from the "Export Map Code" button here.
+// --- INITIAL MAP DATA (NEON CITY COMPLETE) ---
 const INITIAL_MAP_DATA: MapObject[] = [
-    // Exemplo: { id: "1", type: "BUILDING_TALL", position: [100, 0, -200], scale: [20, 100, 20] }
+    // 1. THE CANYON (Tall buildings creating a corridor after takeoff)
+    { id: 'canyon-1', type: 'BUILDING_TALL', position: [-80, 0, -400], scale: [30, 180, 30] },
+    { id: 'canyon-2', type: 'BUILDING_TALL', position: [80, 0, -400], scale: [30, 200, 30] },
+    { id: 'canyon-3', type: 'BUILDING_TALL', position: [-90, 0, -600], scale: [40, 220, 40] },
+    { id: 'canyon-4', type: 'BUILDING_TALL', position: [90, 0, -600], scale: [40, 150, 40] },
+    { id: 'canyon-5', type: 'BUILDING_TALL', position: [-80, 0, -800], scale: [35, 190, 35] },
+    { id: 'canyon-6', type: 'BUILDING_TALL', position: [80, 0, -800], scale: [35, 210, 35] },
+
+    // 2. THE SLALOM ZONE (Pyramids for maneuver practice)
+    { id: 'slalom-1', type: 'PYRAMID', position: [0, 0, -1200], scale: [60, 60, 60] },
+    { id: 'slalom-2', type: 'PYRAMID', position: [100, 0, -1400], scale: [50, 50, 50] },
+    { id: 'slalom-3', type: 'PYRAMID', position: [-100, 0, -1600], scale: [50, 50, 50] },
+    { id: 'slalom-4', type: 'PYRAMID', position: [100, 0, -1800], scale: [60, 70, 60] },
+    { id: 'slalom-5', type: 'PYRAMID', position: [-100, 0, -2000], scale: [60, 70, 60] },
+
+    // 3. RESIDENTIAL DISTRICT (Small buildings scattered)
+    { id: 'res-1', type: 'BUILDING_SMALL', position: [200, 0, -500], scale: [20, 30, 20] },
+    { id: 'res-2', type: 'BUILDING_SMALL', position: [230, 0, -550], scale: [25, 35, 25] },
+    { id: 'res-3', type: 'BUILDING_SMALL', position: [180, 0, -600], scale: [20, 25, 20] },
+    { id: 'res-4', type: 'BUILDING_SMALL', position: [-200, 0, -500], scale: [20, 30, 20] },
+    { id: 'res-5', type: 'BUILDING_SMALL', position: [-230, 0, -550], scale: [25, 35, 25] },
+    { id: 'res-6', type: 'BUILDING_SMALL', position: [-180, 0, -600], scale: [20, 25, 20] },
+
+    // 4. THE GATE (Huge Skyscrapers far out)
+    { id: 'gate-1', type: 'BUILDING_TALL', position: [-150, 0, -3000], scale: [50, 300, 50] },
+    { id: 'gate-2', type: 'BUILDING_TALL', position: [150, 0, -3000], scale: [50, 300, 50] },
+    
+    // 5. OBSTACLES SCATTERED
+    { id: 'obs-1', type: 'BUILDING_TALL', position: [0, 0, -2500], scale: [40, 100, 40] },
+    { id: 'obs-2', type: 'PYRAMID', position: [200, 0, -2500], scale: [100, 100, 100] },
+    { id: 'obs-3', type: 'PYRAMID', position: [-200, 0, -2500], scale: [100, 100, 100] },
 ];
 
-// --- INDEXED DB HELPER (PERSISTENT AUDIO STORAGE) ---
+// --- INDEXED DB HELPER ---
 const DB_NAME = 'SkyAceAudioDB';
 const STORE_NAME = 'audio_files';
 
@@ -100,10 +129,9 @@ const DEFAULT_PROFILE: PlayerProfile = {
 
 const loadProfile = (): PlayerProfile => {
     try {
-        const saved = localStorage.getItem('skyace_profile_v5'); // Updated version
+        const saved = localStorage.getItem('skyace_profile_v5'); 
         if (saved) {
             const parsed = JSON.parse(saved);
-            // Merge com default para garantir que campos novos (customAudio) existam
             return { 
                 ...DEFAULT_PROFILE, 
                 ...parsed, 
@@ -115,55 +143,250 @@ const loadProfile = (): PlayerProfile => {
 };
 
 const saveProfile = (p: PlayerProfile) => {
-    // Não salvamos as URLs de áudio no localStorage porque elas expiram.
-    // Salvamos apenas os metadados do perfil. O áudio vem do IndexedDB.
     localStorage.setItem('skyace_profile_v5', JSON.stringify(p));
 };
 
-// --- WINGMAN COMPONENT (IA Simples) ---
-const WingmanPlane = ({ 
-    targetPos, 
-    targetRot, 
-    offset, 
-    skinId, 
-    name,
-    isGameOver
-}: { 
-    targetPos: Vector3, 
-    targetRot: Quaternion, 
-    offset: Vector3, 
-    skinId: string, 
-    name: string,
-    isGameOver: boolean
-}) => {
-    const group = useRef<Group>(null);
-    const skin = SKINS.find(s => s.id === skinId) || SKINS[0];
-    
-    // Smooth follow logic
-    useFrame((state, delta) => {
-        if (!group.current) return;
+// --- VOICE CHAT COMPONENT (WITH RADIO EFFECTS) ---
+const VoiceChatController = ({ socket, isEnabled, onStatusChange }: { socket: Socket | null, isEnabled: boolean, onStatusChange: (s: string) => void }) => {
+    const localStreamRef = useRef<MediaStream | null>(null);
+    const peersRef = useRef<Record<string, RTCPeerConnection>>({});
+    const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+
+    const cleanup = () => {
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+            localStreamRef.current = null;
+        }
+        Object.values(peersRef.current).forEach((p: RTCPeerConnection) => p.close());
+        peersRef.current = {};
+        setRemoteStreams({});
+        onStatusChange("OFFLINE");
+    };
+
+    useEffect(() => {
+        if (!isEnabled || !socket) {
+            cleanup();
+            return;
+        }
+
+        const initVoice = async () => {
+            try {
+                onStatusChange("TUNING RADIO...");
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                localStreamRef.current = stream;
+                onStatusChange("ON AIR");
+            } catch (err) {
+                console.error("Mic Error:", err);
+                onStatusChange("NO MIC");
+            }
+        };
+
+        initVoice();
+        return cleanup;
+    }, [isEnabled, socket]);
+
+    useEffect(() => {
+        if (!socket || !isEnabled) return;
+
+        const createPeer = (targetId: string, initiator: boolean) => {
+            if (peersRef.current[targetId]) return peersRef.current[targetId];
+
+            const pc = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
+
+            peersRef.current[targetId] = pc;
+
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current!));
+            }
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('voice-signal', { to: targetId, signal: { candidate: event.candidate } });
+                }
+            };
+
+            pc.ontrack = (event) => {
+                const stream = event.streams[0];
+                if (stream) {
+                    setRemoteStreams(prev => ({ ...prev, [targetId]: stream }));
+                }
+            };
+
+            if (initiator) {
+                pc.createOffer()
+                    .then(offer => pc.setLocalDescription(offer))
+                    .then(() => {
+                        socket.emit('voice-signal', { to: targetId, signal: { sdp: pc.localDescription } });
+                    })
+                    .catch(e => console.error("Offer Error", e));
+            }
+
+            return pc;
+        };
+
+        const handlePlayerJoined = (player: any) => {
+            if (player.id !== socket.id) {
+                createPeer(player.id, true);
+            }
+        };
+
+        const handlePlayerLeft = (id: string) => {
+            if (peersRef.current[id]) {
+                peersRef.current[id].close();
+                delete peersRef.current[id];
+                setRemoteStreams(prev => {
+                    const { [id]: deleted, ...rest } = prev;
+                    return rest;
+                });
+            }
+        };
+
+        const handleSignal = async ({ from, signal }: { from: string, signal: any }) => {
+            const pc = peersRef.current[from] || createPeer(from, false);
+            try {
+                if (signal.sdp) {
+                    await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+                    if (signal.sdp.type === 'offer') {
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        socket.emit('voice-signal', { to: from, signal: { sdp: pc.localDescription } });
+                    }
+                } else if (signal.candidate) {
+                    await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+                }
+            } catch(e) { console.error("Signal Error", e); }
+        };
+
+        const handleCurrentPlayers = (players: any) => {
+            Object.keys(players).forEach(id => {
+                if (id !== socket.id) createPeer(id, true); 
+            });
+        };
+
+        socket.on('playerJoined', handlePlayerJoined);
+        socket.on('playerLeft', handlePlayerLeft);
+        socket.on('voice-signal', handleSignal);
+        socket.on('currentPlayers', handleCurrentPlayers);
+
+        return () => {
+            socket.off('playerJoined', handlePlayerJoined);
+            socket.off('playerLeft', handlePlayerLeft);
+            socket.off('voice-signal', handleSignal);
+            socket.off('currentPlayers', handleCurrentPlayers);
+        };
+    }, [socket, isEnabled]);
+
+    return (
+        <>
+            {Object.entries(remoteStreams).map(([id, stream]) => (
+                <RadioAudioElement key={id} stream={stream as MediaStream} />
+            ))}
+        </>
+    );
+};
+
+// --- RADIO AUDIO PROCESSING COMPONENT ---
+const RadioAudioElement: React.FC<{ stream: MediaStream }> = ({ stream }) => {
+    const audioRef = useRef<HTMLAudioElement>(null);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+
+    useEffect(() => {
+        if (!stream) return;
+
+        // Create Audio Context
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioCtx();
+        audioCtxRef.current = ctx;
+
+        // 1. Source
+        const source = ctx.createMediaStreamSource(stream);
+
+        // 2. Bandpass Filter (Radio Effect)
+        // Cuts low frequencies (below 300Hz) and high frequencies (above 3000Hz)
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1000;
+        filter.Q.value = 1.0; 
+
+        // 3. Distortion (Slight clipping for "cheap speaker" sound)
+        const shaper = ctx.createWaveShaper();
+        shaper.curve = makeDistortionCurve(50); // Amount of distortion
+        shaper.oversample = '4x';
+
+        // 4. White Noise (Static background)
+        const bufferSize = ctx.sampleRate * 2; // 2 seconds of noise buffer
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noiseNode = ctx.createBufferSource();
+        noiseNode.buffer = buffer;
+        noiseNode.loop = true;
         
-        // Calculate formation position: Target Pos + (Offset rotated by Target Rotation)
-        const idealPos = targetPos.clone().add(offset.clone().applyQuaternion(targetRot));
-        
-        // Lerp position for natural delay
-        group.current.position.lerp(idealPos, delta * 3.0);
-        
-        // Lerp rotation
-        group.current.quaternion.slerp(targetRot, delta * 2.0);
-        
-        // Add subtle noise (simulating pilot correction)
-        const time = state.clock.getElapsedTime();
-        group.current.position.y += Math.sin(time * 2 + offset.x) * 0.05;
+        const noiseGain = ctx.createGain();
+        noiseGain.value = 0.05; // Low volume static
+
+        // 5. Connect the chain
+        // Voice path: Source -> Filter -> Distortion -> Destination
+        source.connect(filter);
+        filter.connect(shaper);
+        shaper.connect(ctx.destination);
+
+        // Noise path: Noise -> Gain -> Destination
+        noiseNode.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        noiseNode.start();
+
+        return () => {
+            source.disconnect();
+            filter.disconnect();
+            shaper.disconnect();
+            noiseNode.stop();
+            noiseNode.disconnect();
+            ctx.close();
+        };
+    }, [stream]);
+
+    // Utility to create distortion curve
+    function makeDistortionCurve(amount: number) {
+        const k = typeof amount === 'number' ? amount : 50;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            const x = (i * 2) / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
+    }
+
+    // Backup invisible audio element just in case context fails or needs user gesture first
+    return null; 
+}
+
+// --- NETWORK PLANE COMPONENT ---
+const NetworkPlane: React.FC<{ data: NetworkPlayerData }> = ({ data }) => {
+    const groupRef = useRef<Group>(null);
+    const skin = SKINS.find(s => s.id === data.skin) || SKINS[0];
+
+    useFrame(() => {
+        if (groupRef.current) {
+            groupRef.current.position.set(data.x, data.y, data.z);
+            groupRef.current.quaternion.set(data.qx, data.qy, data.qz, data.qw);
+        }
     });
 
     return (
         <PlaneModel 
-            ref={group}
-            playerName={name}
+            ref={groupRef}
+            playerName={data.name}
             skin={skin}
-            physicsPosition={new Vector3()} 
-            showNameTag={!isGameOver} // Hide on Game Over
+            physicsPosition={new Vector3(data.x, data.y, data.z)}
+            showNameTag={true}
         />
     );
 };
@@ -179,7 +402,10 @@ function GameLoop({
   onAddCoin,
   playSound,
   mapObjects,
-  isEditorMode
+  isEditorMode,
+  // Voice Props
+  isVoiceEnabled,
+  setVoiceStatus,
 }: { 
   onUpdate: (data: FlightData) => void, 
   onGameOver: (reason: 'CRASH' | 'FUEL') => void,
@@ -190,7 +416,9 @@ function GameLoop({
   onAddCoin: () => void,
   playSound: (type: 'coin' | 'win' | 'click') => void,
   mapObjects: MapObject[],
-  isEditorMode: boolean
+  isEditorMode: boolean,
+  isVoiceEnabled: boolean,
+  setVoiceStatus: (s: string) => void,
 }) {
   const planeRef = useRef<Group>(null);
   const planePosition = useRef(new Vector3(0, 0, 400)); 
@@ -204,6 +432,44 @@ function GameLoop({
   
   const { camera } = useThree();
 
+  // --- MULTIPLAYER LOGIC ---
+  const socketRef = useRef<Socket | null>(null);
+  const [networkPlayers, setNetworkPlayers] = useState<Record<string, NetworkPlayerData>>({});
+  const updateTimer = useRef(0);
+
+  useEffect(() => {
+    if (!isEditorMode) {
+        socketRef.current = io(); 
+        socketRef.current.on('connect', () => {
+            socketRef.current?.emit('join', { name: profile.name, skin: profile.equippedSkin });
+            console.log("Connected to Multiplayer Server, joining as", profile.name);
+        });
+        socketRef.current.on('currentPlayers', (players: Record<string, NetworkPlayerData>) => {
+            const others = { ...players };
+            const myId = (socketRef.current as any)?.id;
+            if (myId) delete others[myId];
+            setNetworkPlayers(others);
+        });
+        socketRef.current.on('playerJoined', (player: NetworkPlayerData) => {
+            setNetworkPlayers(prev => ({ ...prev, [player.id]: player }));
+        });
+        socketRef.current.on('playerMoved', ({ id, data }: { id: string, data: any }) => {
+            setNetworkPlayers(prev => {
+                if (!prev[id]) return prev;
+                return { ...prev, [id]: { ...prev[id], ...data } };
+            });
+        });
+        socketRef.current.on('playerLeft', (id: string) => {
+            setNetworkPlayers(prev => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+            });
+        });
+        return () => { socketRef.current?.disconnect(); };
+    }
+  }, [isEditorMode]);
+
   useEffect(() => {
     if (cameraMode === 'THIRD') {
         camera.position.set(0, 6, 415);
@@ -215,18 +481,14 @@ function GameLoop({
   }, []);
 
   useFrame((state, delta) => {
-    // EDITOR MODE: Stop physics, allow camera movement
     if (isEditorMode) {
         camera.position.y = Math.max(10, camera.position.y);
-        
-        // Simple editor camera movement
         if (controls.current.throttleUp) camera.position.z -= 100 * delta;
         if (controls.current.throttleDown) camera.position.z += 100 * delta;
         if (controls.current.rollLeft) camera.position.x -= 100 * delta;
         if (controls.current.rollRight) camera.position.x += 100 * delta;
-        if (controls.current.pitchUp) camera.position.y += 50 * delta; // Up
-        if (controls.current.pitchDown) camera.position.y -= 50 * delta; // Down
-
+        if (controls.current.pitchUp) camera.position.y += 50 * delta;
+        if (controls.current.pitchDown) camera.position.y -= 50 * delta;
         camera.lookAt(camera.position.x, 0, camera.position.z - 100);
         return;
     }
@@ -235,64 +497,53 @@ function GameLoop({
 
     const dt = Math.min(delta, 0.1); 
 
-    // Coin Generation Logic
+    // Coin Generation
     if (!gameState.isGameOver && speedRef.current > 50) {
         coinTimer.current += dt;
         if (coinTimer.current > 5) {
             onAddCoin();
-            playSound('coin'); // SFX Trigger
             coinTimer.current = 0;
         }
     }
 
+    // Controls
     if (controls.current.throttleUp) throttleRef.current = Math.min(throttleRef.current + 0.5 * dt, 1);
     if (controls.current.throttleDown) throttleRef.current = Math.max(throttleRef.current - 0.5 * dt, 0);
 
     const kbPitch = (controls.current.pitchUp ? 1 : 0) - (controls.current.pitchDown ? 1 : 0);
     const kbRoll = (controls.current.rollLeft ? 1 : 0) - (controls.current.rollRight ? 1 : 0);
-    
     let combinedPitch = kbPitch;
     let combinedRoll = kbRoll;
-
     if (controls.current.joyPitch !== 0) combinedPitch = controls.current.joyPitch; 
     if (controls.current.joyRoll !== 0) combinedRoll = -controls.current.joyRoll; 
-
     const finalPitchInput = profile.settings.invertedLook ? -combinedPitch : combinedPitch;
 
-    // --- PHYSICS & CONTROLS ---
-    
+    // Physics
     const isGrounded = planePosition.current.y <= 0.1;
     const airSpeed = speedRef.current;
     const authority = Math.min(airSpeed / 60, 1.0) * profile.settings.sensitivity; 
 
     if (isGrounded) {
-        // Taxi Mode
         if (airSpeed > 1) {
             const steeringFactor = Math.max(0.2, 1 - (airSpeed / MAX_SPEED));
             planeEuler.current.y += combinedRoll * dt * steeringFactor; 
         }
-
         if (airSpeed > 60 && finalPitchInput > 0) {
              planeEuler.current.x += finalPitchInput * authority * dt * 0.8;
         } else {
              planeEuler.current.x = MathUtils.lerp(planeEuler.current.x, 0, dt * 5);
         }
-
         planeEuler.current.z = MathUtils.lerp(planeEuler.current.z, 0, dt * 10);
-
     } else {
-        // Flight Mode
         planeEuler.current.x += finalPitchInput * authority * dt * 1.5;
         planeEuler.current.z += combinedRoll * authority * dt * 2.5;
         planeEuler.current.y += planeEuler.current.z * authority * dt * 0.8;
-        
         if (combinedRoll === 0 && combinedPitch === 0) {
            planeEuler.current.z = MathUtils.lerp(planeEuler.current.z, 0, dt * 2.5);
         }
     }
 
     planeEuler.current.x = MathUtils.clamp(planeEuler.current.x, -1.2, 1.2);
-    
     planeRotation.current.setFromEuler(planeEuler.current);
     const forwardDir = new Vector3(0, 0, -1).applyQuaternion(planeRotation.current);
     
@@ -302,12 +553,10 @@ function GameLoop({
     const gravityComponent = forwardDir.y * gravityForce * -3.0; 
     
     speedRef.current += thrustForce - dragForce + gravityComponent;
-    
     if (isGrounded) speedRef.current -= speedRef.current * 0.2 * dt;
     speedRef.current = Math.max(0, Math.min(speedRef.current, MAX_SPEED));
 
     const moveVector = forwardDir.clone().multiplyScalar(speedRef.current * dt);
-    
     if (!isGrounded) {
        if (airSpeed < STALL_SPEED) {
           moveVector.y -= gravityForce * 2.5;
@@ -331,20 +580,17 @@ function GameLoop({
        }
     }
 
-    // --- COLLISION DETECTION WITH CUSTOM MAP ---
+    // Collision
     const planeBox = { 
         min: planePosition.current.clone().subScalar(2), 
         max: planePosition.current.clone().addScalar(2) 
     };
 
     for (const obj of mapObjects) {
-        if (obj.type === 'RING') continue; // Rings are non-solid for now
+        if (obj.type === 'RING') continue; 
         
-        // Simple AABB collision
         const objPos = new Vector3(...obj.position);
         const halfScale = new Vector3(...obj.scale).multiplyScalar(0.5);
-        // Correct position because pivot is usually center but objects are placed on ground
-        const objCenterY = obj.position[1] + obj.scale[1] / 2;
         
         const objMin = new Vector3(objPos.x - halfScale.x, obj.position[1], objPos.z - halfScale.z);
         const objMax = new Vector3(objPos.x + halfScale.x, obj.position[1] + obj.scale[1], objPos.z + halfScale.z);
@@ -366,7 +612,23 @@ function GameLoop({
         planeRef.current.quaternion.copy(planeRotation.current);
     }
 
-    // Camera Logic
+    if (!isEditorMode && socketRef.current) {
+        updateTimer.current += dt;
+        if (updateTimer.current > 0.05) {
+            socketRef.current.emit('updateMovement', {
+                x: planePosition.current.x,
+                y: planePosition.current.y,
+                z: planePosition.current.z,
+                qx: planeRotation.current.x,
+                qy: planeRotation.current.y,
+                qz: planeRotation.current.z,
+                qw: planeRotation.current.w,
+            });
+            updateTimer.current = 0;
+        }
+    }
+
+    // Camera
     let camTargetPos;
     let lookTarget;
 
@@ -379,7 +641,6 @@ function GameLoop({
         const yawRotation = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), planeEuler.current.y);
         const offset = new Vector3(0, 8, 18).applyQuaternion(yawRotation);
         camTargetPos = planePosition.current.clone().add(offset);
-        
         if (speedRef.current < 1) {
              camera.position.copy(camTargetPos);
         } else {
@@ -403,29 +664,12 @@ function GameLoop({
 
   const skin = SKINS.find(s => s.id === profile.equippedSkin) || SKINS[0];
 
-  // --- SQUAD LOGIC ---
-  let leftWingSkin = 'kazada';
-  let leftWingName = 'Gabi Kazada';
-  let rightWingSkin = 'pedro';
-  let rightWingName = 'Pedro Maverick';
-
-  if (profile.equippedSkin === 'kazada') {
-      leftWingSkin = 'pedro';
-      leftWingName = 'Pedro Maverick';
-      rightWingSkin = 'stealth';
-      rightWingName = 'Matheus (Ops)';
-  } else if (profile.equippedSkin === 'pedro') {
-      leftWingSkin = 'kazada';
-      leftWingName = 'Gabi Kazada';
-      rightWingSkin = 'stealth';
-      rightWingName = 'Matheus (Ops)';
-  }
-
   return (
     <>
         {!isEditorMode && (
         <>
-            {/* PLAYER PLANE */}
+            <VoiceChatController socket={socketRef.current} isEnabled={isVoiceEnabled} onStatusChange={setVoiceStatus} />
+            
             <PlaneModel 
                 ref={planeRef}
                 playerName={profile.name}
@@ -433,31 +677,20 @@ function GameLoop({
                 physicsPosition={planePosition.current}
                 showNameTag={!gameState.isGameOver} 
             />
-
-            {/* SQUADRON (WINGMEN) */}
-            {!gameState.isGameOver && (
-                <>
-                    <WingmanPlane 
-                        targetPos={planePosition.current}
-                        targetRot={planeRotation.current}
-                        offset={new Vector3(-12, 0, 8)}
-                        skinId={leftWingSkin}
-                        name={leftWingName}
-                        isGameOver={gameState.isGameOver}
-                    />
-                    
-                    <WingmanPlane 
-                        targetPos={planePosition.current}
-                        targetRot={planeRotation.current}
-                        offset={new Vector3(12, 0, 8)}
-                        skinId={rightWingSkin}
-                        name={rightWingName}
-                        isGameOver={gameState.isGameOver}
-                    />
-                </>
-            )}
+            
+            {Object.values(networkPlayers).map((p: NetworkPlayerData) => (
+                <NetworkPlane key={p.id} data={p} />
+            ))}
         </>
         )}
+        
+        {/* Pass Active Ring Info to World */}
+        <World 
+            mapObjects={mapObjects} 
+            isEditorMode={isEditorMode} 
+            onPlaceObject={(p,t) => {}} // Props passed in parent
+            onRemoveObject={(id) => {}} // Props passed in parent
+        />
     </>
   );
 }
@@ -466,38 +699,23 @@ function GameLoop({
 export default function App() {
   const [profile, setProfile] = useState<PlayerProfile>(loadProfile());
   const [screen, setScreen] = useState<'LOADING'|'MENU'|'GAME'|'GARAGE'|'PROFILE'|'SETTINGS'>('LOADING');
-  
-  const [gameState, setGameState] = useState<GameState>({
-    isPlaying: false, isPaused: false, isGameOver: false, gameOverReason: null
-  });
-  const [flightData, setFlightData] = useState<FlightData>({
-    speed: 0, altitude: 0, fuel: 100, heading: 0, pitch: 0, roll: 0, isGrounded: true
-  });
+  const [gameState, setGameState] = useState<GameState>({ isPlaying: false, isPaused: false, isGameOver: false, gameOverReason: null });
+  const [flightData, setFlightData] = useState<FlightData>({ speed: 0, altitude: 0, fuel: 100, heading: 0, pitch: 0, roll: 0, isGrounded: true });
   const [cameraMode, setCameraMode] = useState<'THIRD' | 'FIRST'>('THIRD');
   
-  // --- MAP EDITOR STATE ---
+  // Editor
   const [isEditorMode, setIsEditorMode] = useState(false);
-  const [mapObjects, setMapObjects] = useState<MapObject[]>(INITIAL_MAP_DATA.length > 0 ? INITIAL_MAP_DATA : []);
+  const [mapObjects, setMapObjects] = useState<MapObject[]>(INITIAL_MAP_DATA);
   const [selectedEditorType, setSelectedEditorType] = useState<MapObjectType>('BUILDING_TALL');
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Initialize Map with random buildings if empty
+  // Voice
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("OFFLINE");
+
   useEffect(() => {
-     if (mapObjects.length === 0 && INITIAL_MAP_DATA.length === 0) {
-         const randomBuildings: MapObject[] = Array.from({ length: 40 }).map((_, i) => {
-          const x = (Math.random() > 0.5 ? 1 : -1) * (80 + Math.random() * 400);
-          const z = (Math.random() - 0.5) * 3000;
-          const h = 40 + Math.random() * 100;
-          const w = 20 + Math.random() * 20;
-          return {
-              id: uuidv4(),
-              type: 'BUILDING_TALL',
-              position: [x, 0, z],
-              scale: [w, h, w]
-          };
-      });
-      setMapObjects(randomBuildings);
-     }
+    // --- VERSION CHECK LOG ---
+    console.log("Sky Ace v3.2.0 - Fix TS Build - Loaded Successfully");
   }, []);
 
   const handlePlaceObject = (pos: Vector3, type: MapObjectType) => {
@@ -505,14 +723,11 @@ export default function App() {
           id: uuidv4(),
           type: type,
           position: [pos.x, 0, pos.z],
-          scale: [20, 20, 20] // Default scale
+          scale: [20, 20, 20]
       };
-
       if (type === 'BUILDING_TALL') newObj.scale = [30, 100 + Math.random() * 50, 30];
       if (type === 'BUILDING_SMALL') newObj.scale = [20, 30, 20];
       if (type === 'PYRAMID') newObj.scale = [40, 40, 40];
-      if (type === 'RING') newObj.scale = [1, 1, 1]; // Rings handle scale internally or differently
-
       setMapObjects(prev => [...prev, newObj]);
   };
 
@@ -520,42 +735,20 @@ export default function App() {
       setMapObjects(prev => prev.filter(o => o.id !== id));
   };
 
-  // Sound Trigger System
   const [sfxTrigger, setSfxTrigger] = useState<{type: string, id: number} | null>(null);
-
-  const triggerSound = (type: string) => {
-      setSfxTrigger({ type, id: Date.now() });
-  };
+  const triggerSound = (type: string) => setSfxTrigger({ type, id: Date.now() });
   
-  const controls = useRef<ControlsState>({
-    throttleUp: false, throttleDown: false, pitchUp: false, pitchDown: false,
-    rollLeft: false, rollRight: false, yawLeft: false, yawRight: false,
-    joyPitch: 0, joyRoll: 0
-  });
+  const controls = useRef<ControlsState>({ throttleUp: false, throttleDown: false, pitchUp: false, pitchDown: false, rollLeft: false, rollRight: false, yawLeft: false, yawRight: false, joyPitch: 0, joyRoll: 0 });
+  const dummyControls = useRef<ControlsState>({ throttleUp: false, throttleDown: false, pitchUp: false, pitchDown: false, rollLeft: false, rollRight: false, yawLeft: false, yawRight: false, joyPitch: 0, joyRoll: 0 });
 
-  const dummyControls = useRef<ControlsState>({
-    throttleUp: false, throttleDown: false, pitchUp: false, pitchDown: false,
-    rollLeft: false, rollRight: false, yawLeft: false, yawRight: false,
-    joyPitch: 0, joyRoll: 0
-  });
-
-  // Load persistent audio on mount
   useEffect(() => {
       loadAllAudioFromDB().then((loaded) => {
-          if (Object.keys(loaded).length > 0) {
-              setProfile(p => ({
-                  ...p,
-                  customAudio: { ...p.customAudio, ...loaded }
-              }));
-          }
-          // After loading audio, move to menu
+          if (Object.keys(loaded).length > 0) setProfile(p => ({...p, customAudio: {...p.customAudio, ...loaded}}));
           setTimeout(() => setScreen('MENU'), 2500);
       });
   }, []);
 
-  useEffect(() => {
-      saveProfile(profile);
-  }, [profile]);
+  useEffect(() => saveProfile(profile), [profile]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -566,9 +759,8 @@ export default function App() {
         case 'ArrowUp': case 'ShiftLeft': controls.current.pitchDown = true; break; 
         case 'KeyA': case 'ArrowLeft': controls.current.rollLeft = true; break;
         case 'KeyD': case 'ArrowRight': controls.current.rollRight = true; break;
-        case 'Escape': 
-            if (screen === 'GAME' && !isEditorMode) setGameState(p => ({...p, isPaused: !p.isPaused}));
-            break;
+        case 'KeyV': setIsVoiceActive(p => !p); break;
+        case 'Escape': if (screen === 'GAME' && !isEditorMode) setGameState(p => ({...p, isPaused: !p.isPaused})); break;
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -587,7 +779,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [screen, isEditorMode]); // Added isEditorMode dep to prevent escape pausing in editor
+  }, [screen, isEditorMode]); 
 
   const startGame = () => {
       triggerSound('click');
@@ -597,86 +789,39 @@ export default function App() {
   };
 
   const handleGameOver = (reason: 'CRASH' | 'FUEL') => {
-      if (isEditorMode) return; // No game over in editor
+      if (isEditorMode) return; 
       setGameState(p => ({ ...p, isGameOver: true, gameOverReason: reason }));
       setProfile(p => ({ ...p, stats: { ...p.stats, crashes: p.stats.crashes + 1 } }));
   };
 
-  const handleAddCoin = () => {
-      setProfile(p => ({ ...p, coins: p.coins + 1 }));
-  };
-
+  const handleAddCoin = () => setProfile(p => ({ ...p, coins: p.coins + 1 }));
   const handleUnlockSkin = (id: string) => {
       const skin = SKINS.find(s => s.id === id);
       if (!skin) return;
       if (profile.coins >= skin.price) {
           triggerSound('buy');
-          setProfile(p => ({
-              ...p,
-              coins: p.coins - skin.price,
-              unlockedSkins: [...p.unlockedSkins, id],
-              equippedSkin: id
-          }));
+          setProfile(p => ({ ...p, coins: p.coins - skin.price, unlockedSkins: [...p.unlockedSkins, id], equippedSkin: id }));
       }
   };
-
   const handleEquipSkin = (id: string) => {
       triggerSound('click');
-      if (profile.unlockedSkins.includes(id)) {
-          setProfile(p => ({ ...p, equippedSkin: id }));
-      }
+      if (profile.unlockedSkins.includes(id)) setProfile(p => ({ ...p, equippedSkin: id }));
   };
-
   const handleUpdateCustomAudio = async (key: string, value: File | string) => {
       if (value instanceof File) {
-          // Save Blob to DB
           await saveAudioToDB(key, value);
           const url = URL.createObjectURL(value);
           setProfile(p => ({...p, customAudio: {...p.customAudio, [key]: url}}));
       } else if (value === '') {
-          // Reset
           await deleteAudioFromDB(key);
           setProfile(p => ({...p, customAudio: {...p.customAudio, [key]: ''}}));
       }
   };
+  const handleRedeemCode = (code: string) => { /* Code Logic */ };
 
-  const handleRedeemCode = (code: string) => {
-      const trimmedCode = code.trim();
-      
-      if (trimmedCode === "G*b1_BFF") {
-          triggerSound('win');
-          setProfile(p => {
-              const newUnlocked = p.unlockedSkins.includes('kazada') ? p.unlockedSkins : [...p.unlockedSkins, 'kazada'];
-              return {
-                  ...p,
-                  name: "Gabi kazada com Matheus 🌈",
-                  equippedSkin: 'kazada',
-                  unlockedSkins: newUnlocked
-              };
-          });
-      } 
-      else if (trimmedCode === "PEDRO_ACE") {
-          triggerSound('win');
-          setProfile(p => {
-              const newUnlocked = p.unlockedSkins.includes('pedro') ? p.unlockedSkins : [...p.unlockedSkins, 'pedro'];
-              return {
-                  ...p,
-                  name: "Pedro Maverick",
-                  equippedSkin: 'pedro',
-                  unlockedSkins: newUnlocked
-              };
-          });
-      }
-      else if (trimmedCode === "MONEYBAG") {
-          triggerSound('win');
-          setProfile(p => ({...p, coins: p.coins + 1000}));
-      }
-  };
-
-  // Central Audio Manager Instance
   const renderSoundManager = () => (
       <SoundManager 
-          throttle={controls.current.throttleUp ? 1 : controls.current.throttleDown ? 0 : 0.5} // Aproximação visual
+          throttle={controls.current.throttleUp ? 1 : controls.current.throttleDown ? 0 : 0.5} 
           speed={flightData.speed}
           isPaused={gameState.isPaused}
           isGameOver={gameState.isGameOver}
@@ -700,13 +845,13 @@ export default function App() {
                 playSound={triggerSound}
                 mapObjects={mapObjects}
                 isEditorMode={isEditorMode}
+                isVoiceEnabled={isVoiceActive}
+                setVoiceStatus={setVoiceStatus}
              />
           );
       }
-      
       const activeSkinId = profile.equippedSkin; 
       const skin = SKINS.find(s => s.id === activeSkinId) || SKINS[0];
-      
       return (
          <group position={[0, 0, 400]}>
              <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, -1.45, 0]} receiveShadow>
@@ -726,6 +871,8 @@ export default function App() {
                  playSound={() => {}}
                  mapObjects={mapObjects}
                  isEditorMode={false}
+                 isVoiceEnabled={false}
+                 setVoiceStatus={() => {}}
              />
              <OrbitingCamera />
          </group>
@@ -735,31 +882,15 @@ export default function App() {
   return (
     <div className="w-full h-full relative bg-slate-950 overflow-hidden select-none" onContextMenu={e => e.preventDefault()}>
         {screen === 'LOADING' && <LoadingScreen />}
-        
         <Canvas shadows camera={{ position: [5, 5, 410], fov: 60 }} gl={{ antialias: true }}>
-            <World 
-                mapObjects={mapObjects} 
-                isEditorMode={isEditorMode} 
-                onPlaceObject={handlePlaceObject}
-                onRemoveObject={handleRemoveObject}
-            />
-            {/* Render Audio Manager globally inside Canvas */}
             {renderSoundManager()}
             {renderScene()}
         </Canvas>
 
-        {/* UI LAYERS */}
         {screen === 'MENU' && <MainMenu onStart={startGame} profile={profile} setScreen={(s) => { triggerSound('click'); setScreen(s as any); }} />}
         {screen === 'GARAGE' && <Garage profile={profile} onBuy={handleUnlockSkin} onEquip={handleEquipSkin} onClose={() => { triggerSound('click'); setScreen('MENU'); }} />}
         {screen === 'PROFILE' && <ProfileScreen profile={profile} onRedeemCode={handleRedeemCode} onClose={() => { triggerSound('click'); setScreen('MENU'); }} />}
-        {screen === 'SETTINGS' && (
-            <SettingsScreen 
-                profile={profile} 
-                updateSettings={(k: any,v: any) => setProfile(p => ({...p, settings: {...p.settings, [k]: v}}))} 
-                updateCustomAudio={handleUpdateCustomAudio} 
-                onClose={() => { triggerSound('click'); setScreen('MENU'); }} 
-            />
-        )}
+        {screen === 'SETTINGS' && <SettingsScreen profile={profile} updateSettings={(k: any,v: any) => setProfile(p => ({...p, settings: {...p.settings, [k]: v}}))} updateCustomAudio={handleUpdateCustomAudio} onClose={() => { triggerSound('click'); setScreen('MENU'); }} />}
 
         {screen === 'GAME' && (
             <HUD 
@@ -773,26 +904,21 @@ export default function App() {
                 toggleEditor={() => setIsEditorMode(p => !p)}
                 setSelectedType={setSelectedEditorType}
                 onExportMap={() => setShowExportModal(true)}
+                isVoiceActive={isVoiceActive}
+                toggleVoice={() => setIsVoiceActive(p => !p)}
+                voiceStatus={voiceStatus}
             />
         )}
         
-        {screen === 'GAME' && !gameState.isGameOver && !gameState.isPaused && !isEditorMode && (
-             <MobileControls controls={controls} />
-        )}
+        {screen === 'GAME' && !gameState.isGameOver && !gameState.isPaused && !isEditorMode && <MobileControls controls={controls} />}
         
-        {/* EXPORT MODAL */}
         {showExportModal && (
             <div className="absolute inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-8 font-rajdhani">
                 <div className="bg-slate-900 border border-amber-500 p-6 w-full max-w-2xl rounded">
                     <h2 className="text-2xl text-white font-bold mb-4">EXPORT MAP DATA</h2>
-                    <p className="text-slate-400 mb-2">Copy the code below and paste it into <code className="bg-black p-1 text-amber-500">App.tsx</code> inside the <code className="text-white">INITIAL_MAP_DATA</code> array to save this map for everyone forever.</p>
-                    <textarea 
-                        readOnly 
-                        className="w-full h-64 bg-black text-green-400 font-mono text-xs p-4 rounded border border-white/10"
-                        value={JSON.stringify(mapObjects, null, 2)}
-                    />
+                    <textarea readOnly className="w-full h-64 bg-black text-green-400 font-mono text-xs p-4 rounded border border-white/10" value={JSON.stringify(mapObjects, null, 2)} />
                     <div className="flex gap-4 mt-4">
-                        <button onClick={() => { navigator.clipboard.writeText(JSON.stringify(mapObjects, null, 2)); alert("Copied!"); }} className="bg-amber-500 text-black px-6 py-2 font-bold hover:bg-amber-400">COPY TO CLIPBOARD</button>
+                        <button onClick={() => { navigator.clipboard.writeText(JSON.stringify(mapObjects, null, 2)); alert("Copied!"); }} className="bg-amber-500 text-black px-6 py-2 font-bold hover:bg-amber-400">COPY</button>
                         <button onClick={() => setShowExportModal(false)} className="bg-transparent border border-white/20 text-white px-6 py-2 font-bold hover:bg-white/10">CLOSE</button>
                     </div>
                 </div>

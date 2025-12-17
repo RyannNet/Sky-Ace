@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { PlayerProfile, SKINS } from '../types';
 import { Play, Settings, ShoppingCart, User, X, ChevronRight, Coins, Lock, Check, Maximize, Upload, RefreshCw } from 'lucide-react';
 
@@ -12,18 +12,33 @@ const Panel = ({ children, className = "" }: { children?: React.ReactNode, class
   </div>
 );
 
-const Button = ({ onClick, children, variant = 'primary', className = "", disabled = false }: any) => {
+type ButtonVariant = 'primary' | 'secondary' | 'disabled';
+
+interface ButtonProps {
+    onClick?: () => void;
+    children?: React.ReactNode;
+    variant?: ButtonVariant;
+    className?: string;
+    disabled?: boolean;
+}
+
+const Button = ({ onClick, children, variant = 'primary', className = "", disabled = false }: ButtonProps) => {
     const base = "px-6 py-4 font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-3 skew-x-[-10deg]";
-    const variants = {
-        primary: "bg-amber-500 text-black hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)]",
-        secondary: "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/30",
-        disabled: "bg-white/5 text-white/30 cursor-not-allowed"
-    };
     
+    // BUILD FIX: Direct logic instead of object lookup to prevent TS7053
+    let variantClass = "bg-amber-500 text-black hover:bg-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.4)]"; // Default Primary
+
+    if (disabled) {
+        variantClass = "bg-white/5 text-white/30 cursor-not-allowed";
+    } else if (variant === 'secondary') {
+        variantClass = "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/30";
+    }
+
     return (
         <button 
             onClick={disabled ? undefined : onClick} 
-            className={`${base} ${disabled ? variants.disabled : variants[variant]} ${className}`}
+            className={`${base} ${variantClass} ${className}`}
+            disabled={disabled}
         >
             <span className="skew-x-[10deg] flex items-center gap-2">{children}</span>
         </button>
@@ -284,7 +299,6 @@ export const SettingsScreen = ({ profile, updateSettings, updateCustomAudio, onC
                                             onChange={(e) => {
                                                 const file = e.target.files?.[0];
                                                 if (file) {
-                                                    // Pass actual File object to App for IndexedDB saving
                                                     updateCustomAudio(item.k, file);
                                                 }
                                             }}
@@ -305,7 +319,7 @@ export const SettingsScreen = ({ profile, updateSettings, updateCustomAudio, onC
                      )}
                 </div>
 
-                <div className="pt-4 text-center text-xs text-slate-600 font-mono">BUILD VERSION 2.6.0-BETA</div>
+                <div className="pt-4 text-center text-xs text-slate-600 font-mono">BUILD VERSION 3.2.0 (HOTFIX)</div>
             </div>
         </Panel>
     </div>
