@@ -240,8 +240,8 @@ export default function App() {
     <div className="w-full h-full relative bg-slate-950 overflow-hidden font-rajdhani">
         {screen === 'SPLASH' && <SplashScreen onStart={handleStartApp} />}
         {screen === 'LOADING' && <LoadingScreen />}
-        {/* Extreme far distance for infinite world feel */}
-        <Canvas shadows camera={{ position: [5, 5, 410], fov: 60, far: 100000 }}>
+        {/* Optimized far distance (15k) to prevent crashing while keeping visuals */}
+        <Canvas shadows camera={{ position: [5, 5, 410], fov: 60, far: 15000 }}>
             <SoundManager throttle={0} speed={0} isPaused={false} isGameOver={false} volume={{music:profile.settings.musicVolume, sfx:profile.settings.sfxVolume}} customAudio={profile.customAudio} triggerSfx={null} />
             {screen === 'GAME' ? (
                 <GameLoop 
@@ -252,7 +252,8 @@ export default function App() {
             ) : (
                 <group position={[0,0,400]}>
                     <ambientLight intensity={1.5}/><pointLight position={[10,10,10]} intensity={2}/>
-                    <PlaneModel playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={new Vector3(0,0,400)} />
+                    {/* showNameTag set to false for menu preview */}
+                    <PlaneModel playerName={profile.name} skin={SKINS.find(s=>s.id===profile.equippedSkin)||SKINS[0]} physicsPosition={new Vector3(0,0,400)} showNameTag={false} />
                 </group>
             )}
         </Canvas>

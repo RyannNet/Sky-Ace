@@ -23,17 +23,15 @@ const PhysicalSun: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =>
     const sunRef = useRef<any>(null);
     const lightRef = useRef<any>(null);
     
-    // The sun position is logically very far away
-    const sunRelativePos = new Vector3(15000, 8000, -25000);
+    // Adjusted Sun distance to stay within 15k limit but look far
+    const sunRelativePos = new Vector3(8000, 4000, -10000);
 
     useFrame(() => {
         if (sunRef.current) {
-            // Sun follows player but stays far to create parallax/infinite effect
             sunRef.current.position.copy(planePosition).add(sunRelativePos);
         }
         if (lightRef.current) {
-            // Light source also follows but points at player area
-            lightRef.current.position.copy(planePosition).add(new Vector3(2000, 3000, 2000));
+            lightRef.current.position.copy(planePosition).add(new Vector3(1000, 1500, 1000));
             lightRef.current.target.position.copy(planePosition);
             lightRef.current.target.updateMatrixWorld();
         }
@@ -42,20 +40,20 @@ const PhysicalSun: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =>
     return (
         <group>
             <mesh ref={sunRef}>
-                <sphereGeometry args={[1200, 32, 32]} />
+                <sphereGeometry args={[500, 32, 32]} />
                 <meshBasicMaterial color="#fffbeb" />
-                <pointLight intensity={5000000} distance={150000} color="#ffedd5" />
+                <pointLight intensity={1000000} distance={20000} color="#ffedd5" />
             </mesh>
             <directionalLight 
                 ref={lightRef}
-                intensity={2.5} 
+                intensity={2.2} 
                 castShadow 
-                shadow-mapSize={[4096, 4096]}
-                shadow-camera-left={-3000}
-                shadow-camera-right={3000}
-                shadow-camera-top={3000}
-                shadow-camera-bottom={-3000}
-                shadow-camera-far={10000}
+                shadow-mapSize={[2048, 2048]}
+                shadow-camera-left={-2000}
+                shadow-camera-right={2000}
+                shadow-camera-top={2000}
+                shadow-camera-bottom={-2000}
+                shadow-camera-far={5000}
             />
         </group>
     );
@@ -67,15 +65,15 @@ export const World: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =
   const distToForest = planePosition.distanceTo(new Vector3(8000, 0, -2000));
   const distToDesert = planePosition.distanceTo(new Vector3(-8000, 0, -2000));
   
-  const showCity = distToCity < 12000;
-  const showForest = distToForest < 12000;
-  const showDesert = distToDesert < 12000;
+  const showCity = distToCity < 10000;
+  const showForest = distToForest < 10000;
+  const showDesert = distToDesert < 10000;
 
   const citySector = useMemo(() => {
     if (!showCity) return null;
     const buildings = [];
-    for (let row = 0; row < 12; row++) {
-        for (let col = -6; col <= 6; col++) {
+    for (let row = 0; row < 10; row++) {
+        for (let col = -5; col <= 5; col++) {
             const x = col * 250;
             const z = -2000 - row * 250;
             const h = 300 + Math.random() * 800;
@@ -88,7 +86,7 @@ export const World: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =
   const forestSector = useMemo(() => {
     if (!showForest) return null;
     const trees = [];
-    for (let i = 0; i < 400; i++) {
+    for (let i = 0; i < 250; i++) {
         const x = 8000 + (Math.random() - 0.5) * 4000;
         const z = -2000 + (Math.random() - 0.5) * 4000;
         trees.push(
@@ -118,7 +116,7 @@ export const World: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =
   const desertSector = useMemo(() => {
     if (!showDesert) return null;
     const structures = [];
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 25; i++) {
         const x = -8000 + (Math.random() - 0.5) * 4000;
         const z = -2000 + (Math.random() - 0.5) * 4000;
         structures.push(
@@ -142,16 +140,15 @@ export const World: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =
   return (
     <>
       <Sky sunPosition={[5000, 4000, -10000]} turbidity={0.01} rayleigh={0.1} />
-      <Stars radius={40000} depth={100} count={20000} factor={8} />
+      <Stars radius={15000} depth={50} count={10000} factor={6} />
       
-      {/* Fog reduced to keep world crisp at distance */}
-      <fog attach="fog" args={['#0ea5e9', 5000, 80000]} />
+      {/* Fog matched to 15k far plane */}
+      <fog attach="fog" args={['#0ea5e9', 3000, 15000]} />
       
       <PhysicalSun planePosition={planePosition} />
       
       <ambientLight intensity={0.6} />
 
-      {/* Start Airport Redesign */}
       <group position={[0, -0.2, 400]}>
         <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
             <planeGeometry args={[3000, 4000]} />
@@ -175,9 +172,9 @@ export const World: React.FC<{ planePosition: Vector3 }> = ({ planePosition }) =
       <group>{forestSector}</group>
       <group>{desertSector}</group>
 
-      {/* Persistent Ocean */}
+      {/* Persistent Ocean sized for far plane */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[planePosition.x, -10, planePosition.z]}>
-        <planeGeometry args={[200000, 200000]} />
+        <planeGeometry args={[40000, 40000]} />
         <meshStandardMaterial color="#0284c7" metalness={1} roughness={0} />
       </mesh>
     </>
