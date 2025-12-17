@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { SKINS, PlayerProfile } from '../types';
-import { Play, ShoppingCart, User, Settings, X, ChevronLeft, Lock, Check, Coins, Zap, Shield, Globe, LockKeyhole } from 'lucide-react';
+import { Play, ShoppingCart, User, Settings, X, ChevronLeft, Lock, Check, Coins, Zap, Shield, Globe, LockKeyhole, PlusSquare, RefreshCw } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const GlassPanel = ({ children, className = "" }: any) => (
     <div className={`bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl overflow-hidden relative ${className}`}>
@@ -60,38 +61,109 @@ export const MainMenu = ({ onStart, profile, setScreen }: any) => (
 );
 
 export const RoomSelection = ({ onJoin, onBack }: any) => {
-    const [code, setCode] = useState("");
+    const [joinCode, setJoinCode] = useState("");
+    const [mode, setMode] = useState<'SELECT' | 'CREATE' | 'JOIN'>('SELECT');
+    const [newRoomCode, setNewRoomCode] = useState("");
+
+    const generateCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let res = '';
+        for (let i = 0; i < 6; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+        setNewRoomCode(res);
+    };
+
+    if (mode === 'CREATE') {
+        return (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
+                <GlassPanel className="w-full max-w-xl p-6 md:p-12 text-center">
+                    <h2 className="text-3xl md:text-5xl font-black italic text-white mb-2">CREATE MISSION</h2>
+                    <p className="text-slate-500 mb-12 tracking-widest uppercase text-[10px] md:text-xs">Setup your private operational sector</p>
+                    
+                    <div className="bg-black/40 border border-white/10 p-8 rounded-lg mb-8 relative group">
+                        <div className="text-[10px] text-amber-500 font-bold tracking-widest uppercase mb-4">Assigned Room Code</div>
+                        <div className="text-5xl md:text-7xl font-black text-white tracking-widest mb-6">{newRoomCode || "------"}</div>
+                        <button onClick={generateCode} className="flex items-center gap-2 mx-auto text-amber-500 hover:text-white transition-colors font-bold text-xs uppercase tracking-tighter">
+                            <RefreshCw size={14} /> Generate New Code
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <button 
+                            disabled={!newRoomCode}
+                            onClick={() => onJoin(newRoomCode)}
+                            className="w-full py-5 bg-white text-black font-black text-xl skew-x-[-10deg] hover:bg-amber-500 transition-all active:scale-95 disabled:opacity-30"
+                        >
+                            <span className="skew-x-[10deg] block">INITIATE DEPLOYMENT</span>
+                        </button>
+                        <button onClick={() => setMode('SELECT')} className="text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] mt-4">Cancel Request</button>
+                    </div>
+                </GlassPanel>
+            </div>
+        );
+    }
+
+    if (mode === 'JOIN') {
+        return (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
+                <GlassPanel className="w-full max-w-xl p-6 md:p-12">
+                    <h2 className="text-3xl md:text-5xl font-black italic text-white mb-2">JOIN PRIVATE</h2>
+                    <p className="text-slate-500 mb-12 tracking-widest uppercase text-[10px] md:text-xs">Enter specialized mission code</p>
+                    
+                    <div className="flex flex-col gap-6">
+                        <input 
+                            autoFocus
+                            value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())}
+                            className="w-full bg-white/5 border border-white/10 p-5 text-white font-black tracking-[0.5em] text-3xl text-center outline-none focus:border-amber-500 transition-all skew-x-[-5deg]" 
+                            placeholder="CODE" 
+                        />
+                        <button 
+                            disabled={joinCode.length < 3}
+                            onClick={() => onJoin(joinCode)}
+                            className="w-full py-5 bg-amber-500 text-black font-black text-xl skew-x-[-10deg] hover:bg-amber-400 transition-all active:scale-95 disabled:opacity-30"
+                        >
+                            <span className="skew-x-[10deg] block">LINK TO SECTOR</span>
+                        </button>
+                        <button onClick={() => setMode('SELECT')} className="text-slate-500 hover:text-white font-bold uppercase tracking-widest text-[10px] mt-4 mx-auto">Back to Comms</button>
+                    </div>
+                </GlassPanel>
+            </div>
+        );
+    }
+
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xl p-4 font-rajdhani">
             <GlassPanel className="w-full max-w-xl p-6 md:p-12">
                 <h2 className="text-3xl md:text-5xl font-black italic text-white mb-1 md:mb-2">LOBBY SELECT</h2>
                 <p className="text-slate-500 mb-8 md:mb-12 tracking-widest uppercase text-[10px] md:text-xs">Choose your operational theatre</p>
                 
-                <div className="grid grid-cols-1 gap-4 md:gap-6">
-                    <button onClick={()=>onJoin('GLOBAL')} className="flex items-center justify-between p-4 md:p-6 bg-amber-500 text-black font-black text-lg md:text-xl skew-x-[-10deg] hover:shadow-2xl transition-all active:scale-95">
-                        <div className="skew-x-[10deg] flex items-center gap-3 md:gap-4"><Globe /> GLOBAL THEATRE</div>
-                        <span className="skew-x-[10deg] text-[10px] opacity-70">OPEN</span>
+                <div className="grid grid-cols-1 gap-4">
+                    {/* Global Option */}
+                    <button onClick={()=>onJoin('GLOBAL')} className="flex items-center justify-between p-5 md:p-6 bg-slate-800 border border-white/5 text-white font-black text-lg md:text-xl skew-x-[-10deg] hover:bg-slate-700 transition-all active:scale-95 group">
+                        <div className="skew-x-[10deg] flex items-center gap-3 md:gap-4"><Globe className="text-cyan-400 group-hover:animate-pulse" /> GLOBAL THEATRE</div>
+                        <span className="skew-x-[10deg] text-[10px] text-cyan-400 font-bold tracking-widest">OPEN</span>
                     </button>
 
-                    <div className="relative py-2">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                        <div className="relative flex justify-center text-[10px] uppercase text-slate-500 tracking-widest"><span className="bg-slate-900 px-3 md:px-4">Private Sector</span></div>
-                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* Create Option */}
+                        <button onClick={()=>{generateCode(); setMode('CREATE')}} className="flex flex-col items-center justify-center p-6 bg-amber-500 text-black font-black skew-x-[-10deg] hover:bg-amber-400 transition-all active:scale-95">
+                            <div className="skew-x-[10deg] flex flex-col items-center gap-2">
+                                <PlusSquare size={24} />
+                                <span className="text-xs tracking-widest uppercase">Create Room</span>
+                            </div>
+                        </button>
 
-                    <div className="flex gap-2 md:gap-3">
-                        <input 
-                            value={code} onChange={e=>setCode(e.target.value.toUpperCase())}
-                            className="flex-1 bg-white/5 border border-white/10 p-3 md:p-5 text-white font-bold tracking-widest outline-none focus:border-amber-500 transition-all skew-x-[-10deg] text-sm md:text-base" 
-                            placeholder="ROOM CODE" 
-                        />
-                        <button onClick={()=>code && onJoin(code)} className="px-5 md:px-8 bg-white text-black font-black skew-x-[-10deg] hover:bg-amber-400 transition-all disabled:opacity-50 active:scale-95" disabled={!code}>
-                            <div className="skew-x-[10deg]"><LockKeyhole size={20}/></div>
+                        {/* Join Option */}
+                        <button onClick={()=>setMode('JOIN')} className="flex flex-col items-center justify-center p-6 bg-white text-black font-black skew-x-[-10deg] hover:bg-slate-200 transition-all active:scale-95">
+                            <div className="skew-x-[10deg] flex flex-col items-center gap-2">
+                                <LockKeyhole size={24} />
+                                <span className="text-xs tracking-widest uppercase">Join Code</span>
+                            </div>
                         </button>
                     </div>
                 </div>
 
-                <button onClick={onBack} className="mt-8 md:mt-12 text-slate-500 hover:text-white flex items-center gap-2 font-bold uppercase tracking-widest text-[10px] md:text-xs">
-                    <ChevronLeft size={14} /> Abort Selection
+                <button onClick={onBack} className="mt-12 text-slate-500 hover:text-white flex items-center gap-2 font-bold uppercase tracking-widest text-[10px] md:text-xs mx-auto">
+                    <ChevronLeft size={14} /> Return to Main Deck
                 </button>
             </GlassPanel>
         </div>

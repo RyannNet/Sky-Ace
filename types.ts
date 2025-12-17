@@ -3,7 +3,7 @@ export interface GameState {
   isPlaying: boolean;
   isPaused: boolean;
   isGameOver: boolean;
-  gameOverReason: 'CRASH' | 'FUEL' | null;
+  gameOverReason: 'CRASH' | 'FUEL' | 'WATER_CRASH' | null;
   currentRoom: string;
 }
 
@@ -87,7 +87,7 @@ export interface NetworkPlayerData {
     qw: number;
 }
 
-export type MapObjectType = 'BUILDING_SMALL' | 'BUILDING_TALL' | 'RING' | 'PYRAMID';
+export type MapObjectType = 'BUILDING_SMALL' | 'BUILDING_TALL' | 'RING' | 'PYRAMID' | 'HANGAR' | 'TOWER' | 'CITY_SKYSCRAPER';
 
 export interface MapObject {
     id: string;

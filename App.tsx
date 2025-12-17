@@ -9,13 +9,9 @@ import { HUD } from './components/HUD';
 import { MainMenu, Garage, ProfileScreen, SettingsScreen, LoadingScreen, RoomSelection } from './components/Menus';
 import { SoundManager } from './components/SoundManager';
 import { MobileControls } from './components/Controls';
-import { GameState, FlightData, ControlsState, GRAVITY, MAX_FUEL, PlayerProfile, SKINS, MapObject, NetworkPlayerData, MAX_SPEED_BASE, STALL_SPEED } from './types';
+import { GameState, FlightData, ControlsState, GRAVITY, PlayerProfile, SKINS, MapObject, NetworkPlayerData, MAX_SPEED_BASE, STALL_SPEED } from './types';
 
-const INITIAL_MAP_DATA: MapObject[] = [
-    { id: 'canyon-1', type: 'BUILDING_TALL', position: [-80, 0, -400], scale: [30, 180, 30] },
-    { id: 'canyon-2', type: 'BUILDING_TALL', position: [80, 0, -400], scale: [30, 200, 30] },
-    { id: 'slalom-1', type: 'PYRAMID', position: [0, 0, -1200], scale: [60, 60, 60] },
-];
+const INITIAL_MAP_DATA: MapObject[] = [];
 
 const loadProfile = (): PlayerProfile => {
     try {
@@ -48,7 +44,8 @@ const NetworkPlane: React.FC<{ data: NetworkPlayerData }> = ({ data }) => {
 
 function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profile, setPlayerCount, setNetworkStatus, chatMessages, setChatMessages }: any) {
   const planeRef = useRef<Group>(null);
-  const planePosition = useRef(new Vector3((Math.random() - 0.5) * 10, 0, 400));
+  // Start at the back of the runway (Z: 850)
+  const planePosition = useRef(new Vector3(0, 0, 850));
   const planeRotation = useRef(new Quaternion());
   const planeEuler = useRef(new Euler(0, 0, 0));
   const speedRef = useRef(0);
@@ -59,60 +56,45 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
   const [networkPlayers, setNetworkPlayers] = useState<Record<string, NetworkPlayerData>>({});
   const updateTimer = useRef(0);
 
-  // Stats from Upgrades
   const maxSpeed = MAX_SPEED_BASE + (profile.upgrades.turbo - 1) * 25;
   const handlingMult = 1 + (profile.upgrades.handling - 1) * 0.15;
 
   useEffect(() => {
     const socket = io({ transports: ['websocket'], upgrade: false });
     socketRef.current = socket;
-
     socket.on('connect', () => {
         setNetworkStatus("CONNECTED");
         socket.emit('join', { name: profile.name, skin: profile.equippedSkin, room: gameState.currentRoom });
     });
-
     socket.on('currentPlayers', (players: any) => {
         const others: Record<string, NetworkPlayerData> = {};
         let count = 0;
         Object.keys(players).forEach(id => {
-            if (id !== socket.id && players[id].room === gameState.currentRoom) {
-                others[id] = players[id];
-            }
+            if (id !== socket.id && players[id].room === gameState.currentRoom) others[id] = players[id];
             if (players[id].room === gameState.currentRoom) count++;
         });
         setNetworkPlayers(others);
         setPlayerCount(count);
     });
-
     socket.on('playerJoined', (player: any) => {
         if (player.room === gameState.currentRoom) {
             setNetworkPlayers(prev => ({ ...prev, [player.id]: player }));
             setPlayerCount((c: number) => c + 1);
         }
     });
-
     socket.on('playerMoved', ({ id, data }: any) => {
         setNetworkPlayers(prev => prev[id] ? { ...prev, [id]: { ...prev[id], ...data } } : prev);
     });
-
     socket.on('playerLeft', (id: string) => {
         setNetworkPlayers(prev => {
             const next = { ...prev };
-            if (next[id]) {
-                delete next[id];
-                setPlayerCount((c: number) => Math.max(1, c - 1));
-            }
+            if (next[id]) { delete next[id]; setPlayerCount((c: number) => Math.max(1, c - 1)); }
             return next;
         });
     });
-
     socket.on('chatMessage', (msg: any) => {
-        if (msg.room === gameState.currentRoom) {
-            setChatMessages((prev: any) => [...prev, msg].slice(-5));
-        }
+        if (msg.room === gameState.currentRoom) setChatMessages((prev: any) => [...prev, msg].slice(-5));
     });
-
     return () => { socket.disconnect(); };
   }, [profile.name, gameState.currentRoom]);
 
@@ -127,12 +109,14 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
     const rollInput = ((controls.current.rollLeft ? 1 : 0) - (controls.current.rollRight ? 1 : 0) - (controls.current.joyRoll || 0)) * handlingMult;
     const finalPitch = profile.settings.invertedLook ? -pitchInput : pitchInput;
 
-    const isGrounded = planePosition.current.y <= 0.1;
+    const isOnAirport = planePosition.current.z > -100 && Math.abs(planePosition.current.x) < 500;
+    const isGrounded = planePosition.current.y <= 0.1 && isOnAirport;
+
     const authority = Math.min(speedRef.current / 60, 1.0) * profile.settings.sensitivity;
 
     if (isGrounded) {
         planeEuler.current.y += rollInput * dt * Math.max(0.2, 1 - (speedRef.current / maxSpeed));
-        if (speedRef.current > 60 && finalPitch > 0) planeEuler.current.x += finalPitch * authority * dt;
+        if (speedRef.current > 70 && finalPitch > 0) planeEuler.current.x += finalPitch * authority * dt;
         else planeEuler.current.x = MathUtils.lerp(planeEuler.current.x, 0, dt * 5);
         planeEuler.current.z = MathUtils.lerp(planeEuler.current.z, 0, dt * 10);
     } else {
@@ -146,15 +130,21 @@ function GameLoop({ onUpdate, onGameOver, controls, gameState, cameraMode, profi
     const forward = new Vector3(0, 0, -1).applyQuaternion(planeRotation.current);
     
     speedRef.current += (throttleRef.current * 160 - speedRef.current * speedRef.current * 0.00025 + forward.y * -35) * dt;
-    if (isGrounded) speedRef.current -= speedRef.current * 0.25 * dt;
+    if (isGrounded) speedRef.current -= speedRef.current * 0.1 * dt;
     speedRef.current = Math.max(0, Math.min(speedRef.current, maxSpeed));
 
     const move = forward.clone().multiplyScalar(speedRef.current * dt);
-    if (!isGrounded && speedRef.current < STALL_SPEED) move.y -= 20 * dt;
+    if (!isGrounded && speedRef.current < STALL_SPEED) move.y -= 25 * dt;
     planePosition.current.add(move);
 
-    if (planePosition.current.y < 0) {
-       if (move.y < -3.5 || Math.abs(planeEuler.current.z) > 0.7) onGameOver('CRASH');
+    // WATER DETECTION
+    if (!isOnAirport && planePosition.current.y < 2) {
+        onGameOver('WATER_CRASH');
+    }
+
+    // GROUND COLLISION
+    if (isOnAirport && planePosition.current.y < 0) {
+       if (move.y < -5.0 || Math.abs(planeEuler.current.z) > 0.8) onGameOver('CRASH');
        else { planePosition.current.y = 0; planeEuler.current.x = 0; planeEuler.current.z = 0; }
     }
 

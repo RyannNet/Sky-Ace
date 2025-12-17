@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Camera, Pause, Users, Signal, Maximize2, Minimize2 } from 'lucide-react';
+import { Camera, Pause, Users, Signal, Maximize2, Minimize2, Waves } from 'lucide-react';
 
 export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, onPause, playerCount, networkStatus, chatMessages }: any) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -26,12 +26,21 @@ export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, 
   }, []);
 
   if (gameState.isGameOver) {
+      const isWater = gameState.gameOverReason === 'WATER_CRASH';
       return (
           <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center text-white z-50 backdrop-blur-xl p-4">
-              <div className="text-5xl md:text-8xl font-black italic mb-2 text-red-500 animate-pulse text-center">CRASHED</div>
-              <p className="text-slate-400 tracking-[0.2em] md:tracking-[0.5em] mb-12 uppercase text-xs md:text-base">{gameState.gameOverReason === 'CRASH' ? 'Structural Failure' : 'Out of Fuel'}</p>
+              <div className={`text-5xl md:text-8xl font-black italic mb-2 ${isWater ? 'text-cyan-500' : 'text-red-500'} animate-pulse text-center`}>
+                {isWater ? 'DROWNED' : 'CRASHED'}
+              </div>
+              <p className="text-slate-400 tracking-[0.2em] md:tracking-[0.5em] mb-12 uppercase text-xs md:text-base text-center max-w-md">
+                {isWater ? (
+                    <span className="flex items-center gap-2 justify-center">
+                        <Waves className="text-cyan-500" /> ENGINE FLAMEOUT DUE TO WATER INGESTION
+                    </span>
+                ) : gameState.gameOverReason === 'CRASH' ? 'Structural Failure on Impact' : 'Fuel Exhaustion'}
+              </p>
               <button onClick={onReset} className="w-full max-w-xs py-5 bg-white text-black font-black text-xl hover:bg-amber-500 transition-all skew-x-[-15deg]">
-                 <span className="skew-x-[15deg] block">RETURN TO BASE</span>
+                 <span className="skew-x-[15deg] block">RETRY MISSION</span>
               </button>
           </div>
       );
@@ -53,7 +62,6 @@ export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, 
                     <span className="text-[10px] md:text-xs font-bold">{playerCount}</span>
                 </div>
                 
-                {/* Chat Feed - Adjusted for Mobile */}
                 <div className="flex flex-col gap-1 mt-2 max-h-24 md:max-h-none overflow-hidden">
                     {chatMessages.map((m: any, i: number) => (
                         <div key={i} className="text-[9px] md:text-[10px] bg-black/40 px-2 py-0.5 md:py-1 rounded w-fit border-l-2 border-amber-500 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px] md:max-w-xs">
@@ -73,7 +81,7 @@ export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, 
             </div>
         </div>
 
-        {/* Center: Flight Director - Scaled for Mobile */}
+        {/* Center: Flight Director */}
         <div className="flex-1 flex items-center justify-center opacity-40 md:opacity-60 scale-75 md:scale-100">
             <div className="relative w-64 h-64 md:w-72 md:h-72">
                 <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
@@ -94,7 +102,13 @@ export const HUD = ({ flightData, gameState, onReset, toggleCamera, cameraMode, 
             </div>
         </div>
 
-        {/* Bottom Bar: Instruments - Responsive Tapes */}
+        {/* Distance Indicator */}
+        <div className="absolute top-1/4 right-8 bg-black/40 p-4 border-r-4 border-amber-500 text-right">
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">METRO RANGE</div>
+            <div className="text-3xl font-black italic">{(Math.abs(flightData.z) / 1000).toFixed(1)}<span className="text-sm ml-1 opacity-50">KM</span></div>
+        </div>
+
+        {/* Bottom Bar: Instruments */}
         <div className="flex justify-between items-end mb-2 md:mb-4 px-2 md:px-0">
              <div className="flex flex-col items-start gap-0 md:gap-1">
                  <div className="text-[8px] md:text-xs text-amber-500 font-bold tracking-widest uppercase">SPD</div>
