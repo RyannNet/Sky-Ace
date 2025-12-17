@@ -328,7 +328,7 @@ const RadioAudioElement: React.FC<{ stream: MediaStream }> = ({ stream }) => {
         noiseNode.loop = true;
         
         const noiseGain = ctx.createGain();
-        noiseGain.value = 0.05; // Low volume static
+        noiseGain.gain.value = 0.05; // FIX: .value does not exist on GainNode, use .gain.value
 
         // 5. Connect the chain
         // Voice path: Source -> Filter -> Distortion -> Destination
@@ -715,7 +715,7 @@ export default function App() {
 
   useEffect(() => {
     // --- VERSION CHECK LOG ---
-    console.log("Sky Ace v3.2.0 - Fix TS Build - Loaded Successfully");
+    console.log("Sky Ace v3.2.1 - Fix TS GainNode Error - Loaded Successfully");
   }, []);
 
   const handlePlaceObject = (pos: Vector3, type: MapObjectType) => {
